@@ -1,0 +1,67 @@
+# Standalone test configuration (for environments without network)
+# This builds only the mock-based tests without external dependencies
+
+cmake_minimum_required(VERSION 3.16)
+project(barcode-access-tests VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Include common headers
+include_directories(${CMAKE_SOURCE_DIR}/../common/include)
+include_directories(${CMAKE_SOURCE_DIR}/mocks)
+
+# Build mock library
+add_library(mock_db STATIC
+    mocks/mock_database.cpp
+)
+
+# If GoogleTest is installed system-wide
+find_package(GTest QUIET)
+
+if(GTest_FOUND)
+    message(STATUS "Using system GoogleTest")
+
+    add_executable(unit_tests
+        unit/test_uuid_validation.cpp
+        unit/test_ticket_service.cpp
+        unit/test_access_log_service.cpp
+        unit/test_barcode_reader.cpp
+        unit/test_hikvision_isapi.cpp
+    )
+
+    target_link_libraries(unit_tests
+        mock_db
+        GTest::gtest
+        GTest::gtest_main
+        pthread
+    )
+
+    add_executable(integration_tests
+        integration/test_api_endpoints.cpp
+        integration/test_full_flow.cpp
+    )
+
+    target_link_libraries(integration_tests
+        mock_db
+        GTest::gtest
+        GTest::gtest_main
+        pthread
+    )
+
+    enable_testing()
+    add_test(NAME UnitTests COMMAND unit_tests)
+    add_test(NAME IntegrationTests COMMAND integration_tests)
+else()
+    message(STATUS "GoogleTest not found - building simple test runner")
+
+    # Simple test runner without GoogleTest
+    add_executable(simple_tests
+        simple_test_runner.cpp
+    )
+
+    target_link_libraries(simple_tests
+        mock_db
+        pthread
+    )
+endif()
