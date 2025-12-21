@@ -1,0 +1,419 @@
+{
+	"info": {
+		"_postman_id": "barcode-access-api",
+		"name": "Barcode Access Control API",
+		"description": "API para sistema de control de acceso por código de barras/QR",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "test_uuid",
+			"value": "550e8400-e29b-41d4-a716-446655440000",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Tickets",
+			"item": [
+				{
+					"name": "Create Ticket",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"uuid\": \"{{test_uuid}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tickets",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets"]
+						},
+						"description": "Crear un nuevo ticket con UUID"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\"\n}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/tickets",
+									"host": ["{{base_url}}"],
+									"path": ["api", "tickets"]
+								}
+							},
+							"status": "Created",
+							"code": 201,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"success\": true,\n    \"message\": \"Ticket created successfully\",\n    \"ticket\": {\n        \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"used\": false,\n        \"used_at\": null,\n        \"used_at_door\": null,\n        \"created_at\": \"2024-01-15 10:30:00\"\n    }\n}"
+						}
+					]
+				},
+				{
+					"name": "Create Ticket (Generate UUID)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate a random UUID",
+									"const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {",
+									"    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);",
+									"    return v.toString(16);",
+									"});",
+									"pm.variables.set('generated_uuid', uuid);",
+									"console.log('Generated UUID:', uuid);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"uuid\": \"{{generated_uuid}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tickets",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets"]
+						},
+						"description": "Crear un ticket con UUID generado automáticamente"
+					},
+					"response": []
+				},
+				{
+					"name": "List Tickets",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tickets?limit=20&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "20",
+									"description": "Número máximo de tickets a retornar"
+								},
+								{
+									"key": "offset",
+									"value": "0",
+									"description": "Offset para paginación"
+								}
+							]
+						},
+						"description": "Listar todos los tickets con paginación"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"url": {
+									"raw": "{{base_url}}/api/tickets",
+									"host": ["{{base_url}}"],
+									"path": ["api", "tickets"]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"success\": true,\n    \"total\": 150000,\n    \"used_count\": 5000,\n    \"available_count\": 145000,\n    \"tickets\": [\n        {\n            \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n            \"used\": false,\n            \"used_at\": null,\n            \"used_at_door\": null,\n            \"created_at\": \"2024-01-15 10:30:00\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Ticket by UUID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tickets/{{test_uuid}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "{{test_uuid}}"]
+						},
+						"description": "Obtener información de un ticket específico"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"success\": true,\n    \"message\": \"Ticket found\",\n    \"ticket\": {\n        \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n        \"used\": false,\n        \"used_at\": null,\n        \"used_at_door\": null,\n        \"created_at\": \"2024-01-15 10:30:00\"\n    }\n}"
+						},
+						{
+							"name": "Not Found",
+							"status": "Not Found",
+							"code": 404,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"success\": false,\n    \"message\": \"Ticket not found\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Ticket",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/tickets/{{test_uuid}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets", "{{test_uuid}}"]
+						},
+						"description": "Eliminar un ticket"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"success\": true,\n    \"message\": \"Ticket deleted successfully\"\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Access Control",
+			"item": [
+				{
+					"name": "Validate Ticket (Door 1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"uuid\": \"{{test_uuid}}\",\n    \"door_id\": 1\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/access/validate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "access", "validate"]
+						},
+						"description": "Validar un ticket y registrar intento de acceso. Si el ticket es válido y no ha sido usado, se marca como usado."
+					},
+					"response": [
+						{
+							"name": "Granted",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"granted\": true,\n    \"reason\": \"GRANTED\",\n    \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"door_id\": 1,\n    \"timestamp\": \"2024-01-15 10:35:00\"\n}"
+						},
+						{
+							"name": "Denied - Already Used",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"granted\": false,\n    \"reason\": \"DENIED_ALREADY_USED\",\n    \"uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n    \"door_id\": 1,\n    \"timestamp\": \"2024-01-15 10:40:00\"\n}"
+						},
+						{
+							"name": "Denied - Not Found",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"granted\": false,\n    \"reason\": \"DENIED_NOT_FOUND\",\n    \"uuid\": \"invalid-uuid-here\",\n    \"door_id\": 1,\n    \"timestamp\": \"2024-01-15 10:40:00\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Validate Ticket (Door 2)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"uuid\": \"{{test_uuid}}\",\n    \"door_id\": 2\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/access/validate",
+							"host": ["{{base_url}}"],
+							"path": ["api", "access", "validate"]
+						},
+						"description": "Validar un ticket en la puerta 2"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Access Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/access/logs?limit=50&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "access", "logs"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Obtener logs de todos los intentos de acceso"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"success\": true,\n    \"total\": 1000,\n    \"granted_count\": 800,\n    \"denied_count\": 200,\n    \"logs\": [\n        {\n            \"id\": 1,\n            \"ticket_uuid\": \"550e8400-e29b-41d4-a716-446655440000\",\n            \"door_id\": 1,\n            \"granted\": true,\n            \"attempts\": 1,\n            \"reason\": \"GRANTED\",\n            \"scanned_at\": \"2024-01-15 10:35:00\"\n        }\n    ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Get Logs by Door",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/access/logs/door/1?limit=50&offset=0",
+							"host": ["{{base_url}}"],
+							"path": ["api", "access", "logs", "door", "1"],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						},
+						"description": "Obtener logs de acceso de una puerta específica"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Logs by Ticket",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/access/logs/ticket/{{test_uuid}}",
+							"host": ["{{base_url}}"],
+							"path": ["api", "access", "logs", "ticket", "{{test_uuid}}"]
+						},
+						"description": "Obtener historial de intentos de acceso de un ticket específico"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Statistics",
+			"item": [
+				{
+					"name": "Get Overall Stats",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/stats",
+							"host": ["{{base_url}}"],
+							"path": ["api", "stats"]
+						},
+						"description": "Obtener estadísticas generales del sistema"
+					},
+					"response": [
+						{
+							"name": "Success",
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"body": "{\n    \"success\": true,\n    \"stats\": {\n        \"total_tickets\": 150000,\n        \"used_tickets\": 5000,\n        \"available_tickets\": 145000,\n        \"total_access_attempts\": 6000,\n        \"granted_access\": 5000,\n        \"denied_access\": 1000,\n        \"door_stats\": [\n            {\n                \"door_id\": 1,\n                \"total_attempts\": 1500,\n                \"granted\": 1250,\n                \"denied\": 250\n            },\n            {\n                \"door_id\": 2,\n                \"total_attempts\": 1500,\n                \"granted\": 1250,\n                \"denied\": 250\n            },\n            {\n                \"door_id\": 3,\n                \"total_attempts\": 1500,\n                \"granted\": 1250,\n                \"denied\": 250\n            },\n            {\n                \"door_id\": 4,\n                \"total_attempts\": 1500,\n                \"granted\": 1250,\n                \"denied\": 250\n            }\n        ]\n    }\n}"
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Bulk Operations",
+			"item": [
+				{
+					"name": "Create Multiple Tickets",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// This is a helper to generate multiple tickets",
+									"// Run this in a loop using Collection Runner or Newman",
+									"const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {",
+									"    var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);",
+									"    return v.toString(16);",
+									"});",
+									"pm.variables.set('bulk_uuid', uuid);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"uuid\": \"{{bulk_uuid}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/tickets",
+							"host": ["{{base_url}}"],
+							"path": ["api", "tickets"]
+						},
+						"description": "Usar con Collection Runner para crear múltiples tickets. Configurar iterations=N para crear N tickets."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Acceso - Panel de Administración</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Control de Acceso por Código de Barras</h1>
+            <p class="subtitle">Panel de Administración</p>
+        </header>
+
+        <!-- Stats Section -->
+        <section class="stats-grid" id="stats-section">
+            <div class="stat-card">
+                <span class="stat-value" id="stat-total">0</span>
+                <span class="stat-label">Total Tickets</span>
+            </div>
+            <div class="stat-card stat-success">
+                <span class="stat-value" id="stat-available">0</span>
+                <span class="stat-label">Disponibles</span>
+            </div>
+            <div class="stat-card stat-warning">
+                <span class="stat-value" id="stat-used">0</span>
+                <span class="stat-label">Usados</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="stat-attempts">0</span>
+                <span class="stat-label">Intentos de Acceso</span>
+            </div>
+            <div class="stat-card stat-success">
+                <span class="stat-value" id="stat-granted">0</span>
+                <span class="stat-label">Accesos Permitidos</span>
+            </div>
+            <div class="stat-card stat-danger">
+                <span class="stat-value" id="stat-denied">0</span>
+                <span class="stat-label">Accesos Denegados</span>
+            </div>
+        </section>
+
+        <!-- Tabs -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="tickets">Tickets</button>
+            <button class="tab" data-tab="logs">Logs de Acceso</button>
+            <button class="tab" data-tab="doors">Por Puerta</button>
+        </nav>
+
+        <!-- Tickets Tab -->
+        <section class="tab-content active" id="tab-tickets">
+            <div class="card">
+                <h2>Agregar Nuevo Ticket</h2>
+                <form id="add-ticket-form" class="form-inline">
+                    <input type="text" id="ticket-uuid" placeholder="UUID del ticket (ej: 550e8400-e29b-41d4-a716-446655440000)" required>
+                    <button type="submit" class="btn btn-primary">Agregar</button>
+                    <button type="button" class="btn btn-secondary" id="generate-uuid">Generar UUID</button>
+                </form>
+                <p class="form-message" id="ticket-message"></p>
+            </div>
+
+            <div class="card">
+                <h2>Lista de Tickets</h2>
+                <div class="table-controls">
+                    <input type="text" id="search-tickets" placeholder="Buscar por UUID...">
+                    <select id="filter-tickets">
+                        <option value="all">Todos</option>
+                        <option value="available">Disponibles</option>
+                        <option value="used">Usados</option>
+                    </select>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>UUID</th>
+                            <th>Estado</th>
+                            <th>Usado En</th>
+                            <th>Puerta</th>
+                            <th>Creado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tickets-table-body">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+                <div class="pagination" id="tickets-pagination">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Logs Tab -->
+        <section class="tab-content" id="tab-logs">
+            <div class="card">
+                <h2>Logs de Acceso</h2>
+                <div class="table-controls">
+                    <select id="filter-logs">
+                        <option value="all">Todos</option>
+                        <option value="granted">Permitidos</option>
+                        <option value="denied">Denegados</option>
+                    </select>
+                </div>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Ticket UUID</th>
+                            <th>Puerta</th>
+                            <th>Resultado</th>
+                            <th>Razón</th>
+                            <th>Intentos</th>
+                            <th>Fecha/Hora</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logs-table-body">
+                        <!-- Dynamic content -->
+                    </tbody>
+                </table>
+                <div class="pagination" id="logs-pagination">
+                    <!-- Dynamic content -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Doors Tab -->
+        <section class="tab-content" id="tab-doors">
+            <div class="doors-grid" id="doors-stats">
+                <!-- Dynamic content -->
+            </div>
+        </section>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

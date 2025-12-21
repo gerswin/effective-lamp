@@ -1,0 +1,13 @@
+# Barcode Access Control - Server Configuration
+# Copy this file to config.ini and adjust values
+
+# Server settings
+server.host = 0.0.0.0
+server.port = 8080
+
+# PostgreSQL database settings
+db.host = localhost
+db.port = 5432
+db.database = barcode_access
+db.user = access_user
+db.password = your_secure_password
