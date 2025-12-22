@@ -65,8 +65,8 @@ public:
 
     // Get access logs
     ENDPOINT("GET", "/api/access/logs", getLogs,
-             QUERY(Int32, limit, "limit", "100"),
-             QUERY(Int32, offset, "offset", "0")) {
+             QUERY(Int32, limit, "limit", 100),
+             QUERY(Int32, offset, "offset", 0)) {
 
         auto& logService = service::AccessLogService::getInstance();
         auto response = dto::AccessLogListResponseDto::createShared();
@@ -98,8 +98,8 @@ public:
     // Get logs by door
     ENDPOINT("GET", "/api/access/logs/door/{door_id}", getLogsByDoor,
              PATH(Int32, door_id),
-             QUERY(Int32, limit, "limit", "100"),
-             QUERY(Int32, offset, "offset", "0")) {
+             QUERY(Int32, limit, "limit", 100),
+             QUERY(Int32, offset, "offset", 0)) {
 
         auto& logService = service::AccessLogService::getInstance();
         auto response = dto::AccessLogListResponseDto::createShared();

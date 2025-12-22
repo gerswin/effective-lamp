@@ -27,24 +27,17 @@ include_directories(${CMAKE_SOURCE_DIR}/common/include)
 include_directories(${LIBPQ_INCLUDE_DIRS})
 include_directories(${CURL_INCLUDE_DIRS})
 
-# Oat++ dependencies (fetched via FetchContent)
-include(FetchContent)
+# Oat++ dependencies
+find_package(oatpp 1.3.0 REQUIRED)
+find_package(oatpp-postgresql 1.3.0 REQUIRED)
 
-FetchContent_Declare(
-    oatpp
-    GIT_REPOSITORY https://github.com/oatpp/oatpp.git
-    GIT_TAG 1.3.0
-)
+link_directories(/usr/local/lib/oatpp-1.3.0)
 
-FetchContent_Declare(
-    oatpp-postgresql
-    GIT_REPOSITORY https://github.com/oatpp/oatpp-postgresql.git
-    GIT_TAG 1.3.0
-)
-
-FetchContent_MakeAvailable(oatpp oatpp-postgresql)
+include_directories(${oatpp_INCLUDE_DIRS})
+include_directories(${oatpp-postgresql_INCLUDE_DIRS})
 
 # Google Test for unit testing
+include(FetchContent)
 FetchContent_Declare(
     googletest
     GIT_REPOSITORY https://github.com/google/googletest.git

@@ -91,8 +91,8 @@ public:
 
     // List all tickets
     ENDPOINT("GET", "/api/tickets", listTickets,
-             QUERY(Int32, limit, "limit", "100"),
-             QUERY(Int32, offset, "offset", "0")) {
+             QUERY(Int32, limit, "limit", 100),
+             QUERY(Int32, offset, "offset", 0)) {
 
         auto& ticketService = service::TicketService::getInstance();
         auto response = dto::TicketListResponseDto::createShared();

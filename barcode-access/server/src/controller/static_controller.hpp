@@ -25,15 +25,19 @@ private:
         return buffer.str();
     }
 
+    bool ends_with(const std::string& str, const std::string& suffix) {
+        return str.size() >= suffix.size() && 0 == str.compare(str.size() - suffix.size(), suffix.size(), suffix);
+    }
+
     std::string getContentType(const std::string& path) {
-        if (path.ends_with(".html")) return "text/html";
-        if (path.ends_with(".css")) return "text/css";
-        if (path.ends_with(".js")) return "application/javascript";
-        if (path.ends_with(".json")) return "application/json";
-        if (path.ends_with(".png")) return "image/png";
-        if (path.ends_with(".jpg") || path.ends_with(".jpeg")) return "image/jpeg";
-        if (path.ends_with(".svg")) return "image/svg+xml";
-        if (path.ends_with(".ico")) return "image/x-icon";
+        if (ends_with(path, ".html")) return "text/html";
+        if (ends_with(path, ".css")) return "text/css";
+        if (ends_with(path, ".js")) return "application/javascript";
+        if (ends_with(path, ".json")) return "application/json";
+        if (ends_with(path, ".png")) return "image/png";
+        if (ends_with(path, ".jpg") || ends_with(path, ".jpeg")) return "image/jpeg";
+        if (ends_with(path, ".svg")) return "image/svg+xml";
+        if (ends_with(path, ".ico")) return "image/x-icon";
         return "text/plain";
     }
 

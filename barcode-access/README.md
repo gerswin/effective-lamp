@@ -46,27 +46,74 @@ Sistema de control de acceso mediante códigos de barras/QR para eventos, integr
 
 ### 1. Instalar dependencias (Debian/Ubuntu)
 
+Asegúrate de tener las herramientas de compilación y las bibliotecas necesarias.
+
 ```bash
 sudo apt update
 sudo apt install -y \
     build-essential \
     cmake \
+    pkg-config \
     libpq-dev \
     libcurl4-openssl-dev \
     libevdev-dev \
+    libatomic1 \
     postgresql-client
 ```
 
-### 2. Compilar
+### 2. Instalar dependencias de `oatpp` (Método Manual)
+
+Este proyecto depende de las bibliotecas `oatpp` y `oatpp-postgresql`. El método de compilación actual que usa `FetchContent` de CMake puede ser inestable. La forma más robusta de compilar es instalar estas dependencias manualmente en el sistema antes de compilar el proyecto principal.
+
+> **Nota**: Realiza estos pasos en un directorio temporal fuera del proyecto.
+
+#### a. Instalar `oatpp` (v1.3.0)
 
 ```bash
-cd barcode-access
+# Clona el repositorio
+git clone --depth 1 --branch 1.3.0 https://github.com/oatpp/oatpp.git
+cd oatpp
+
+# Compila e instala
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+cd ../..
+rm -rf oatpp
+```
+
+#### b. Instalar `oatpp-postgresql` (v1.3.0)
+
+```bash
+# Clona el repositorio
+git clone --depth 1 --branch 1.3.0 https://github.com/oatpp/oatpp-postgresql.git
+cd oatpp-postgresql
+
+# Compila e instala
+mkdir build && cd build
+cmake ..
+make -j$(nproc)
+sudo make install
+cd ../..
+rm -rf oatpp-postgresql
+```
+
+### 3. Compilar el Proyecto
+
+Una vez instaladas las dependencias, puedes compilar el proyecto principal.
+
+```bash
+# Desde el directorio raíz del proyecto
+rm -rf build # Limpia el directorio de compilación anterior si existe
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
 ```
 
-### 3. Configurar base de datos
+Los ejecutables se encontrarán en `build/server/access-server` y `build/client/access-client`.
+
+### 4. Configurar base de datos
 
 ```bash
 # Iniciar PostgreSQL con Docker (desarrollo)
@@ -76,14 +123,14 @@ docker-compose up -d postgres
 psql -h localhost -U postgres -f scripts/init_db.sql
 ```
 
-### 4. Configurar servidor
+### 5. Configurar servidor
 
 ```bash
 cp config.ini.example config.ini
 # Editar config.ini con los datos de tu base de datos
 ```
 
-### 5. Configurar cliente
+### 6. Configurar cliente
 
 ```bash
 cp client.ini.example client.ini

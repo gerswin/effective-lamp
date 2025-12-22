@@ -12,8 +12,8 @@ add_executable(access-server ${SERVER_SOURCES})
 
 target_include_directories(access-server PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${oatpp_SOURCE_DIR}/src
-    ${oatpp-postgresql_SOURCE_DIR}/src
+    ${oatpp_INCLUDE_DIRS}
+    ${oatpp-postgresql_INCLUDE_DIRS}
 )
 
 target_link_libraries(access-server

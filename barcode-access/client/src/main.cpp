@@ -1,3 +1,4 @@
+#include <curl/curl.h>
 #include "barcode_reader.hpp"
 #include "hikvision_isapi.hpp"
 #include "db_client.hpp"

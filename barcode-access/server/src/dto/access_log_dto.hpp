@@ -30,6 +30,15 @@ class AccessLogListResponseDto : public oatpp::DTO {
     DTO_FIELD(List<Object<AccessLogDto>>, logs);
 };
 
+class DoorStatsDto : public oatpp::DTO {
+    DTO_INIT(DoorStatsDto, DTO)
+
+    DTO_FIELD(Int32, door_id);
+    DTO_FIELD(Int32, total_attempts);
+    DTO_FIELD(Int32, granted);
+    DTO_FIELD(Int32, denied);
+};
+
 class StatsDto : public oatpp::DTO {
     DTO_INIT(StatsDto, DTO)
 
@@ -40,15 +49,6 @@ class StatsDto : public oatpp::DTO {
     DTO_FIELD(Int32, granted_access);
     DTO_FIELD(Int32, denied_access);
     DTO_FIELD(List<Object<DoorStatsDto>>, door_stats);
-};
-
-class DoorStatsDto : public oatpp::DTO {
-    DTO_INIT(DoorStatsDto, DTO)
-
-    DTO_FIELD(Int32, door_id);
-    DTO_FIELD(Int32, total_attempts);
-    DTO_FIELD(Int32, granted);
-    DTO_FIELD(Int32, denied);
 };
 
 class StatsResponseDto : public oatpp::DTO {
