@@ -3,6 +3,7 @@ set(SERVER_SOURCES
     src/db/database.cpp
     src/service/ticket_service.cpp
     src/service/access_log_service.cpp
+    src/service/discovery_service.cpp
     src/controller/ticket_controller.cpp
     src/controller/access_controller.cpp
     src/controller/static_controller.cpp
