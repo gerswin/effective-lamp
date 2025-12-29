@@ -15,7 +15,6 @@ target_include_directories(access-client PRIVATE
 
 target_link_libraries(access-client
     ${CURL_LIBRARIES}
-    ${LIBPQ_LIBRARIES}
     Threads::Threads
     atomic
 )
