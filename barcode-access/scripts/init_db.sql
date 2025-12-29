@@ -8,12 +8,9 @@ GRANT ALL PRIVILEGES ON DATABASE barcode_access TO kubo;
 
 -- Connect to barcode_access database and run the following:
 
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
 -- Tickets table
 CREATE TABLE IF NOT EXISTS tickets (
-    uuid UUID PRIMARY KEY,
+    uuid VARCHAR(20) PRIMARY KEY,
     used BOOLEAN DEFAULT FALSE,
     max_uses INTEGER DEFAULT -1,      -- -1 for unlimited uses
     current_uses INTEGER DEFAULT 0,  -- Current number of uses
@@ -29,7 +26,7 @@ CREATE INDEX IF NOT EXISTS idx_tickets_created_at ON tickets(created_at);
 -- Access logs table
 CREATE TABLE IF NOT EXISTS access_logs (
     id SERIAL PRIMARY KEY,
-    ticket_uuid UUID,
+    ticket_uuid VARCHAR(20),
     door_id INTEGER NOT NULL,
     granted BOOLEAN NOT NULL,
     attempts INTEGER DEFAULT 1,

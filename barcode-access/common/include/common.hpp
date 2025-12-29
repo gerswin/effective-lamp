@@ -5,14 +5,30 @@
 #include <chrono>
 #include <regex>
 
+#include <random>
+
 namespace barcode_access {
 
-// UUID validation regex
-inline bool is_valid_uuid(const std::string& uuid) {
-    static const std::regex uuid_regex(
-        "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
-    );
-    return std::regex_match(uuid, uuid_regex);
+// NanoID validation (max 10 chars, safe characters)
+inline bool is_valid_ticket_code(const std::string& code) {
+    if (code.length() > 10 || code.empty()) return false;
+    static const std::string charset = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+    return code.find_first_not_of(charset) == std::string::npos;
+}
+
+// Simple NanoID generator (length 10)
+inline std::string generate_nanoid(int length = 10) {
+    static const char charset[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
+    std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_int_distribution<int> distribution(0, sizeof(charset) - 2); // -2 because sizeof includes null terminator
+
+    std::string result;
+    result.reserve(length);
+    for (int i = 0; i < length; ++i) {
+        result += charset[distribution(generator)];
+    }
+    return result;
 }
 
 // Get current timestamp as ISO string
@@ -30,7 +46,7 @@ enum class AccessResult {
     DENIED_NOT_FOUND,
     DENIED_ALREADY_USED,
     DENIED_MAX_USES_REACHED,
-    DENIED_INVALID_UUID,
+    DENIED_INVALID_FORMAT,
     ERROR_DB,
     ERROR_DOOR,
     ROLLBACK
@@ -42,7 +58,7 @@ inline std::string access_result_to_string(AccessResult result) {
         case AccessResult::DENIED_NOT_FOUND: return "DENIED_NOT_FOUND";
         case AccessResult::DENIED_ALREADY_USED: return "DENIED_ALREADY_USED";
         case AccessResult::DENIED_MAX_USES_REACHED: return "DENIED_MAX_USES_REACHED";
-        case AccessResult::DENIED_INVALID_UUID: return "DENIED_INVALID_UUID";
+        case AccessResult::DENIED_INVALID_FORMAT: return "DENIED_INVALID_FORMAT";
         case AccessResult::ERROR_DB: return "ERROR_DB";
         case AccessResult::ERROR_DOOR: return "ERROR_DOOR";
         case AccessResult::ROLLBACK: return "ROLLBACK";

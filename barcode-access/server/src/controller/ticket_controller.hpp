@@ -28,18 +28,19 @@ public:
         auto& ticketService = service::TicketService::getInstance();
         auto response = dto::TicketResponseDto::createShared();
 
+        std::string uuid;
         if (!ticketDto->uuid || ticketDto->uuid->empty()) {
-            response->success = false;
-            response->message = "UUID is required";
-            return createDtoResponse(Status::CODE_400, response);
+            // Generate NanoID
+            uuid = barcode_access::generate_nanoid(10);
+        } else {
+            uuid = ticketDto->uuid;
         }
 
-        std::string uuid = ticketDto->uuid;
         int max_uses = ticketDto->max_uses;
 
-        if (!barcode_access::is_valid_uuid(uuid)) {
+        if (!barcode_access::is_valid_ticket_code(uuid)) {
             response->success = false;
-            response->message = "Invalid UUID format";
+            response->message = "Invalid Ticket Code format (NanoID)";
             return createDtoResponse(Status::CODE_400, response);
         }
 

@@ -10,8 +10,8 @@ TicketService& TicketService::getInstance() {
 }
 
 bool TicketService::createTicket(const std::string& uuid, int max_uses) {
-    if (!barcode_access::is_valid_uuid(uuid)) {
-        std::cerr << "Invalid UUID format: " << uuid << std::endl;
+    if (!barcode_access::is_valid_ticket_code(uuid)) {
+        std::cerr << "Invalid Ticket Code format: " << uuid << std::endl;
         return false;
     }
 
@@ -131,10 +131,10 @@ ValidationResult TicketService::validateAndUseTicket(const std::string& uuid, in
     vr.max_uses = -1; // Default values
     vr.current_uses = 0;
 
-    // Validate UUID format
-    if (!barcode_access::is_valid_uuid(uuid)) {
+    // Validate Ticket Code format
+    if (!barcode_access::is_valid_ticket_code(uuid)) {
         vr.granted = false;
-        vr.reason = barcode_access::AccessResult::DENIED_INVALID_UUID;
+        vr.reason = barcode_access::AccessResult::DENIED_INVALID_FORMAT;
         return vr;
     }
 
@@ -197,7 +197,7 @@ ValidationResult TicketService::validateAndUseTicket(const std::string& uuid, in
 }
 
 bool TicketService::rollbackUsage(const std::string& uuid, int door_id) {
-    if (!barcode_access::is_valid_uuid(uuid)) {
+    if (!barcode_access::is_valid_ticket_code(uuid)) {
         return false;
     }
 

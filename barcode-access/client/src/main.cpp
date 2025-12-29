@@ -227,8 +227,8 @@ int main(int argc, char* argv[]) {
         std::cout << "Scanned: " << barcode << std::endl;
 
         // Validate UUID format
-        if (!barcode_access::is_valid_uuid(barcode)) {
-            std::cout << "Result: DENIED (Invalid UUID format)" << std::endl;
+        if (!barcode_access::is_valid_ticket_code(barcode)) {
+            std::cout << "Result: DENIED (Invalid Ticket Code format)" << std::endl;
             std::cout << "----------------------------------------" << std::endl;
             return;
         }
