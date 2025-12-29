@@ -116,6 +116,10 @@ TEST_F(UUIDValidationTest, AccessResultToString_ErrorDoor) {
     EXPECT_EQ(access_result_to_string(AccessResult::ERROR_DOOR), "ERROR_DOOR");
 }
 
+TEST_F(UUIDValidationTest, AccessResultToString_DeniedMaxUsesReached) {
+    EXPECT_EQ(access_result_to_string(AccessResult::DENIED_MAX_USES_REACHED), "DENIED_MAX_USES_REACHED");
+}
+
 // Test timestamp generation
 TEST_F(UUIDValidationTest, TimestampNotEmpty) {
     std::string ts = get_current_timestamp();

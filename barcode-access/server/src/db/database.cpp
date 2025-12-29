@@ -1,6 +1,7 @@
 #include "db/database.hpp"
 #include <sstream>
 #include <iostream>
+#include <mutex>
 
 namespace db {
 
@@ -14,14 +15,31 @@ Database::~Database() {
 }
 
 bool Database::connect(const barcode_access::DatabaseConfig& config) {
-    std::ostringstream connStr;
-    connStr << "host=" << config.host
-            << " port=" << config.port
-            << " dbname=" << config.database
-            << " user=" << config.user;
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    m_config = config; // Store config
+    return reconnect();
+}
 
-    if (!config.password.empty()) {
-        connStr << " password=" << config.password;
+void Database::disconnect() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
+    if (conn_) {
+        PQfinish(conn_);
+        conn_ = nullptr;
+    }
+}
+
+bool Database::reconnect() {
+    // Lock is already acquired in connect/execute/executeParams before calling reconnect.
+    // std::lock_guard<std::mutex> lock(m_mutex); // No need to lock here again, as caller already holds the lock.
+    disconnect(); // disconnect already acquires the lock.
+    std::ostringstream connStr;
+    connStr << "host=" << m_config.host
+            << " port=" << m_config.port
+            << " dbname=" << m_config.database
+            << " user=" << m_config.user;
+
+    if (!m_config.password.empty()) {
+        connStr << " password=" << m_config.password;
     }
 
     conn_ = PQconnectdb(connStr.str().c_str());
@@ -33,15 +51,8 @@ bool Database::connect(const barcode_access::DatabaseConfig& config) {
         return false;
     }
 
-    std::cout << "Database connected successfully" << std::endl;
+    std::cout << "Database reconnected successfully" << std::endl;
     return true;
-}
-
-void Database::disconnect() {
-    if (conn_) {
-        PQfinish(conn_);
-        conn_ = nullptr;
-    }
 }
 
 bool Database::isConnected() const {
@@ -49,18 +60,24 @@ bool Database::isConnected() const {
 }
 
 PGresult* Database::execute(const std::string& query) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     if (!isConnected()) {
-        std::cerr << "Database not connected" << std::endl;
-        return nullptr;
+        std::cerr << "Database not connected. Reconnecting..." << std::endl;
+        if(!reconnect()) {
+            return nullptr;
+        }
     }
     return PQexec(conn_, query.c_str());
 }
 
 PGresult* Database::executeParams(const std::string& query,
                                    const std::vector<std::string>& params) {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     if (!isConnected()) {
-        std::cerr << "Database not connected" << std::endl;
-        return nullptr;
+        std::cerr << "Database not connected. Reconnecting..." << std::endl;
+        if(!reconnect()) {
+            return nullptr;
+        }
     }
 
     std::vector<const char*> paramValues;
@@ -79,21 +96,25 @@ PGresult* Database::executeParams(const std::string& query,
 }
 
 bool Database::beginTransaction() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     PGResultGuard result(execute("BEGIN"));
     return result.ok();
 }
 
 bool Database::commitTransaction() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     PGResultGuard result(execute("COMMIT"));
     return result.ok();
 }
 
 bool Database::rollbackTransaction() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     PGResultGuard result(execute("ROLLBACK"));
     return result.ok();
 }
 
 bool Database::initializeSchema() {
+    std::lock_guard<std::recursive_mutex> lock(m_mutex);
     const char* schema = R"(
         -- Create extension for UUID if not exists
         CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
@@ -102,10 +123,16 @@ bool Database::initializeSchema() {
         CREATE TABLE IF NOT EXISTS tickets (
             uuid UUID PRIMARY KEY,
             used BOOLEAN DEFAULT FALSE,
+            max_uses INTEGER DEFAULT -1,
+            current_uses INTEGER DEFAULT 0,
             used_at TIMESTAMP WITH TIME ZONE NULL,
             used_at_door INTEGER NULL,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
+
+        -- Add columns if they don't exist (for migration)
+        ALTER TABLE tickets ADD COLUMN IF NOT EXISTS max_uses INTEGER DEFAULT -1;
+        ALTER TABLE tickets ADD COLUMN IF NOT EXISTS current_uses INTEGER DEFAULT 0;
 
         -- Create index on used status for faster queries
         CREATE INDEX IF NOT EXISTS idx_tickets_used ON tickets(used);

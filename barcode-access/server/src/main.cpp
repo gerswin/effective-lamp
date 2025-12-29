@@ -101,6 +101,7 @@ barcode_access::ServerConfig loadConfig(const std::string& configPath) {
 }
 
 void run(const barcode_access::ServerConfig& config) {
+    std::cout << "DEBUG: Entering run function" << std::endl;
     // Initialize Oat++ Environment
     oatpp::base::Environment::init();
 

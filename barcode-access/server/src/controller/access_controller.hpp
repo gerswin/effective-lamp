@@ -50,6 +50,8 @@ public:
 
         response->granted = result.granted;
         response->reason = barcode_access::access_result_to_string(result.reason);
+        response->max_uses = result.max_uses;
+        response->current_uses = result.current_uses;
 
         // Log the access attempt
         logService.logAccess(uuid, door_id, result.granted, result.reason);
@@ -61,6 +63,39 @@ public:
             // This allows the client to handle the response properly
             return createDtoResponse(Status::CODE_200, response);
         }
+    }
+
+    // Rollback usage (called by clients if door fails to open)
+    ENDPOINT("POST", "/api/access/rollback", rollbackUsage,
+             BODY_DTO(Object<dto::RollbackTicketDto>, rollbackDto)) {
+
+        auto& ticketService = service::TicketService::getInstance();
+        auto& logService = service::AccessLogService::getInstance();
+
+        auto response = dto::RollbackResponseDto::createShared();
+
+        if (!rollbackDto->uuid || rollbackDto->uuid->empty()) {
+            response->success = false;
+            response->message = "UUID is required";
+            return createDtoResponse(Status::CODE_400, response);
+        }
+
+        std::string uuid = rollbackDto->uuid;
+        int door_id = rollbackDto->door_id;
+
+        bool result = ticketService.rollbackUsage(uuid, door_id);
+
+        if (result) {
+            response->success = true;
+            response->message = "Rollback successful";
+            // Log the rollback
+            logService.logAccess(uuid, door_id, false, barcode_access::AccessResult::ROLLBACK); 
+        } else {
+            response->success = false;
+            response->message = "Rollback failed";
+        }
+
+        return createDtoResponse(Status::CODE_200, response);
     }
 
     // Get access logs

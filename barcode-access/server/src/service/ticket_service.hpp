@@ -12,6 +12,8 @@ namespace service {
 struct TicketInfo {
     std::string uuid;
     bool used;
+    int max_uses;
+    int current_uses;
     std::string used_at;
     int used_at_door;
     std::string created_at;
@@ -22,6 +24,8 @@ struct ValidationResult {
     barcode_access::AccessResult reason;
     std::string uuid;
     int door_id;
+    int max_uses;
+    int current_uses;
 };
 
 class TicketService {
@@ -29,13 +33,14 @@ public:
     static TicketService& getInstance();
 
     // CRUD operations
-    bool createTicket(const std::string& uuid);
+    bool createTicket(const std::string& uuid, int max_uses);
     std::optional<TicketInfo> getTicket(const std::string& uuid);
-    std::vector<TicketInfo> getAllTickets(int limit = 100, int offset = 0);
+    std::vector<TicketInfo> getAllTickets(int limit = 100, int offset = 0, const std::string& filter = "all", const std::string& search = "");
     bool deleteTicket(const std::string& uuid);
 
     // Validation and usage
     ValidationResult validateAndUseTicket(const std::string& uuid, int door_id);
+    bool rollbackUsage(const std::string& uuid, int door_id);
 
     // Stats
     int getTotalCount();

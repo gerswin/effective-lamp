@@ -29,9 +29,11 @@ enum class AccessResult {
     GRANTED,
     DENIED_NOT_FOUND,
     DENIED_ALREADY_USED,
+    DENIED_MAX_USES_REACHED,
     DENIED_INVALID_UUID,
     ERROR_DB,
-    ERROR_DOOR
+    ERROR_DOOR,
+    ROLLBACK
 };
 
 inline std::string access_result_to_string(AccessResult result) {
@@ -39,9 +41,11 @@ inline std::string access_result_to_string(AccessResult result) {
         case AccessResult::GRANTED: return "GRANTED";
         case AccessResult::DENIED_NOT_FOUND: return "DENIED_NOT_FOUND";
         case AccessResult::DENIED_ALREADY_USED: return "DENIED_ALREADY_USED";
+        case AccessResult::DENIED_MAX_USES_REACHED: return "DENIED_MAX_USES_REACHED";
         case AccessResult::DENIED_INVALID_UUID: return "DENIED_INVALID_UUID";
         case AccessResult::ERROR_DB: return "ERROR_DB";
         case AccessResult::ERROR_DOOR: return "ERROR_DOOR";
+        case AccessResult::ROLLBACK: return "ROLLBACK";
         default: return "UNKNOWN";
     }
 }

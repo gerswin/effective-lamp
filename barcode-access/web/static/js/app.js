@@ -121,22 +121,9 @@ async function loadTickets(page = 0) {
     const search = document.getElementById('search-tickets').value;
 
     try {
-        const data = await apiCall(`/tickets?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}`);
+        const data = await apiCall(`/tickets?limit=${PAGE_SIZE}&offset=${page * PAGE_SIZE}&filter=${filter}&search=${search}`);
         if (data.success) {
-            let tickets = data.tickets || [];
-
-            // Client-side filtering
-            if (filter === 'available') {
-                tickets = tickets.filter(t => !t.used);
-            } else if (filter === 'used') {
-                tickets = tickets.filter(t => t.used);
-            }
-
-            if (search) {
-                tickets = tickets.filter(t => t.uuid.toLowerCase().includes(search.toLowerCase()));
-            }
-
-            renderTicketsTable(tickets);
+            renderTicketsTable(data.tickets || []);
             renderPagination('tickets-pagination', data.total, page, loadTickets);
         }
     } catch (error) {
@@ -148,7 +135,7 @@ function renderTicketsTable(tickets) {
     const tbody = document.getElementById('tickets-table-body');
 
     if (tickets.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center">No hay tickets</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center">No hay tickets</td></tr>';
         return;
     }
 
@@ -160,6 +147,8 @@ function renderTicketsTable(tickets) {
                     ${ticket.used ? 'Usado' : 'Disponible'}
                 </span>
             </td>
+            <td>${ticket.maxUses === -1 ? 'Ilimitado' : ticket.maxUses}</td>
+            <td>${ticket.currentUses}</td>
             <td>${ticket.used_at ? formatDate(ticket.used_at) : '-'}</td>
             <td>${ticket.used_at_door ? 'Puerta ' + ticket.used_at_door : '-'}</td>
             <td>${formatDate(ticket.created_at)}</td>
@@ -253,11 +242,21 @@ function renderPagination(containerId, total, currentPage, loadFunction) {
 }
 
 // Create ticket
-async function createTicket(uuid) {
+async function createTicket() {
+    const uuid = document.getElementById('ticket-uuid').value.trim();
+    const maxUses = parseInt(document.getElementById('ticket-max-uses').value.trim());
+
+    if (!uuid) {
+        showMessage('ticket-message', 'UUID es requerido', false);
+        return;
+    }
+
     try {
-        const data = await apiCall('/tickets', 'POST', { uuid });
+        const data = await apiCall('/tickets', 'POST', { uuid, maxUses });
         if (data.success) {
             showMessage('ticket-message', 'Ticket creado correctamente', true);
+            document.getElementById('ticket-uuid').value = '';
+            document.getElementById('ticket-max-uses').value = '-1';
             loadTickets(currentTicketsPage);
             loadStats();
         } else {
@@ -312,11 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add ticket form
     document.getElementById('add-ticket-form').addEventListener('submit', (e) => {
         e.preventDefault();
-        const uuid = document.getElementById('ticket-uuid').value.trim();
-        if (uuid) {
-            createTicket(uuid);
-            document.getElementById('ticket-uuid').value = '';
-        }
+        createTicket();
     });
 
     // Generate UUID button

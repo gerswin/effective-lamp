@@ -1,4 +1,5 @@
 #include <curl/curl.h>
+#include <poll.h>
 #include "barcode_reader.hpp"
 #include "hikvision_isapi.hpp"
 #include "db_client.hpp"
@@ -112,7 +113,8 @@ int main(int argc, char* argv[]) {
 
     // Test connection to central server
     if (!accessClient.testConnection()) {
-        std::cerr << "Warning: Cannot connect to central server. Continuing anyway..." << std::endl;
+        std::cerr << "Error: Cannot connect to central server. Please check the server URL and make sure the server is running." << std::endl;
+        return 1;
     }
 
     // Initialize Hikvision ISAPI client
@@ -151,6 +153,14 @@ int main(int argc, char* argv[]) {
                 std::cout << "Door " << config.door_id << " OPENED" << std::endl;
             } else {
                 std::cout << "Warning: Failed to open door: " << hikvision.getLastError() << std::endl;
+                
+                // Attempt to rollback the ticket usage
+                std::cout << "Attempting to rollback ticket usage..." << std::endl;
+                if (accessClient.rollbackUsage(barcode, config.door_id)) {
+                    std::cout << "Ticket usage rolled back successfully." << std::endl;
+                } else {
+                    std::cout << "Failed to rollback ticket usage. Please contact support." << std::endl;
+                }
             }
         }
 
@@ -164,15 +174,29 @@ int main(int argc, char* argv[]) {
         std::cerr << "Make sure the input device exists and you have permission to read it." << std::endl;
         std::cerr << "Try running with sudo or add your user to the 'input' group." << std::endl;
 
-        // Fall back to stdin for testing
+#include <poll.h>
+
+// ... inside main, in the fallback block
+
         std::cout << "\nFalling back to keyboard input for testing." << std::endl;
         std::cout << "Type UUID and press Enter to simulate scan:" << std::endl;
 
+        struct pollfd fds;
+        fds.fd = STDIN_FILENO;
+        fds.events = POLLIN;
+
         std::string input;
-        while (running && std::getline(std::cin, input)) {
-            if (!input.empty()) {
-                onBarcodeScanned(input);
+        while (running) {
+            int ret = poll(&fds, 1, 100); // 100ms timeout
+            if (ret > 0) {
+                if (std::getline(std::cin, input) && !input.empty()) {
+                    onBarcodeScanned(input);
+                }
+            } else if (ret < 0) {
+                // Error
+                break;
             }
+            // if ret == 0, it's a timeout, loop continues and checks 'running'
         }
     } else {
         // Main loop - wait for signal

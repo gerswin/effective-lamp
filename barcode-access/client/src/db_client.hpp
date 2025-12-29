@@ -24,6 +24,9 @@ public:
     // Validate ticket with central server
     ValidationResponse validateTicket(const std::string& uuid, int door_id);
 
+    // Rollback usage if door failed to open
+    bool rollbackUsage(const std::string& uuid, int door_id);
+
     // Test connection to server
     bool testConnection();
 

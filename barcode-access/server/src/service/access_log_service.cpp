@@ -196,10 +196,15 @@ std::vector<DoorStats> AccessLogService::getDoorStats() {
 
     for (int i = 0; i < result.rowCount(); ++i) {
         DoorStats ds;
-        ds.door_id = std::stoi(result.getValue(i, 0));
-        ds.total_attempts = std::stoi(result.getValue(i, 1));
-        ds.granted = std::stoi(result.getValue(i, 2));
-        ds.denied = std::stoi(result.getValue(i, 3));
+        auto door_id_str = result.getValue(i, 0);
+        auto total_str = result.getValue(i, 1);
+        auto granted_str = result.getValue(i, 2);
+        auto denied_str = result.getValue(i, 3);
+
+        ds.door_id = door_id_str.empty() ? 0 : std::stoi(door_id_str);
+        ds.total_attempts = total_str.empty() ? 0 : std::stoi(total_str);
+        ds.granted = granted_str.empty() ? 0 : std::stoi(granted_str);
+        ds.denied = denied_str.empty() ? 0 : std::stoi(denied_str);
         stats.push_back(ds);
     }
 

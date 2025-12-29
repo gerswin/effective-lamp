@@ -74,48 +74,60 @@ void BarcodeReader::stop() {
     std::cout << "Barcode reader stopped" << std::endl;
 }
 
+#include <poll.h>
+
+// ... inside readLoop method
+
 void BarcodeReader::readLoop() {
     struct input_event ev;
     current_barcode_.clear();
 
-    while (running_) {
-        ssize_t n = read(fd_, &ev, sizeof(ev));
+    struct pollfd fds;
+    fds.fd = fd_;
+    fds.events = POLLIN;
 
-        if (n < 0) {
-            if (errno == EINTR) continue;
-            last_error_ = "Read error: " + std::string(strerror(errno));
+    while (running_) {
+        int ret = poll(&fds, 1, 100); // 100ms timeout
+        if (ret < 0) {
+            // Error
+            last_error_ = "Poll error: " + std::string(strerror(errno));
             std::cerr << last_error_ << std::endl;
             break;
         }
-
-        if (n != sizeof(ev)) {
+        if (ret == 0) {
+            // Timeout, loop and check running_ flag
             continue;
         }
 
-        // Only process key events
-        if (ev.type != EV_KEY) {
-            continue;
-        }
+        if (fds.revents & POLLIN) {
+            ssize_t n = read(fd_, &ev, sizeof(ev));
 
-        // Only process key press events (value 1 = press, 0 = release, 2 = repeat)
-        if (ev.value != 1) {
-            continue;
-        }
-
-        // Enter key signals end of barcode
-        if (ev.code == KEY_ENTER || ev.code == KEY_KPENTER) {
-            if (!current_barcode_.empty() && callback_) {
-                std::cout << "Barcode scanned: " << current_barcode_ << std::endl;
-                callback_(current_barcode_);
-                current_barcode_.clear();
+            if (n < 0) {
+                if (errno == EINTR) continue;
+                last_error_ = "Read error: " + std::string(strerror(errno));
+                std::cerr << last_error_ << std::endl;
+                break;
             }
-            continue;
-        }
 
-        // Map key code to character
-        auto it = KEY_MAP.find(ev.code);
-        if (it != KEY_MAP.end()) {
-            current_barcode_ += it->second;
+            if (n != sizeof(ev)) {
+                continue;
+            }
+
+            if (ev.type != EV_KEY || ev.value != 1) {
+                continue;
+            }
+
+            if (ev.code == KEY_ENTER || ev.code == KEY_KPENTER) {
+                if (!current_barcode_.empty() && callback_) {
+                    callback_(current_barcode_);
+                    current_barcode_.clear();
+                }
+            } else {
+                auto it = KEY_MAP.find(ev.code);
+                if (it != KEY_MAP.end()) {
+                    current_barcode_ += it->second;
+                }
+            }
         }
     }
 }

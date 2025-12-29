@@ -29,7 +29,7 @@ protected:
     };
 
     // Simulate POST /api/tickets
-    APIResponse createTicketEndpoint(const std::string& uuid) {
+    APIResponse createTicketEndpoint(const std::string& uuid, int max_uses = -1) {
         APIResponse response;
 
         if (uuid.empty()) {
@@ -46,7 +46,7 @@ protected:
             return response;
         }
 
-        if (db->createTicket(uuid)) {
+        if (db->createTicket(uuid, max_uses)) {
             response.status_code = 201;
             response.success = true;
             response.message = "Ticket created successfully";
@@ -100,6 +100,8 @@ protected:
         std::string reason;
         std::string uuid;
         int door_id;
+        int max_uses;
+        int current_uses;
     };
 
     // Simulate POST /api/access/validate
@@ -107,28 +109,42 @@ protected:
         ValidationResult result;
         result.uuid = uuid;
         result.door_id = door_id;
+        result.max_uses = -1; // Default
+        result.current_uses = 0; // Default
 
         // Check UUID format
         if (!barcode_access::is_valid_uuid(uuid)) {
             result.granted = false;
-            result.reason = "DENIED_INVALID_UUID";
+            result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_INVALID_UUID);
             db->logAccess(uuid, door_id, false, result.reason);
             return result;
         }
 
         // Check if ticket exists
-        auto ticket = db->getTicket(uuid);
-        if (!ticket.has_value()) {
+        auto ticket_opt = db->getTicket(uuid);
+        if (!ticket_opt.has_value()) {
             result.granted = false;
-            result.reason = "DENIED_NOT_FOUND";
+            result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_NOT_FOUND);
             db->logAccess(uuid, door_id, false, result.reason);
             return result;
         }
 
-        // Check if already used
-        if (ticket->used) {
+        MockTicket ticket = ticket_opt.value();
+        result.max_uses = ticket.max_uses;
+        result.current_uses = ticket.current_uses;
+
+        // Check against max_uses first for limited tickets
+        if (ticket.max_uses != -1 && ticket.current_uses >= ticket.max_uses) {
             result.granted = false;
-            result.reason = "DENIED_ALREADY_USED";
+            result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_MAX_USES_REACHED);
+            db->logAccess(uuid, door_id, false, result.reason);
+            return result;
+        }
+
+        // Check if already used (for single-use tickets, or for unlimited tickets if set explicitly)
+        if (ticket.used && (ticket.max_uses == -1 || ticket.max_uses == 1 && ticket.current_uses == 1)) {
+            result.granted = false;
+            result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_ALREADY_USED);
             db->logAccess(uuid, door_id, false, result.reason);
             return result;
         }
@@ -136,8 +152,15 @@ protected:
         // Mark as used and grant access
         db->markTicketUsed(uuid, door_id);
         result.granted = true;
-        result.reason = "GRANTED";
+        result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::GRANTED);
         db->logAccess(uuid, door_id, true, result.reason);
+        
+        // Update current_uses for the result after markTicketUsed
+        ticket_opt = db->getTicket(uuid);
+        if(ticket_opt.has_value()){
+            result.current_uses = ticket_opt->current_uses;
+            result.max_uses = ticket_opt->max_uses;
+        }
 
         return result;
     }
@@ -145,7 +168,7 @@ protected:
 
 // Test ticket creation endpoint
 TEST_F(APIEndpointTest, CreateTicket_Success) {
-    auto response = createTicketEndpoint("550e8400-e29b-41d4-a716-446655440000");
+    auto response = createTicketEndpoint("550e8400-e29b-41d4-a716-446655440000", -1);
 
     EXPECT_EQ(response.status_code, 201);
     EXPECT_TRUE(response.success);
@@ -171,7 +194,7 @@ TEST_F(APIEndpointTest, CreateTicket_InvalidUUID) {
 
 // Test get ticket endpoint
 TEST_F(APIEndpointTest, GetTicket_Found) {
-    db->createTicket("550e8400-e29b-41d4-a716-446655440000");
+    db->createTicket("550e8400-e29b-41d4-a716-446655440000", -1);
     auto response = getTicketEndpoint("550e8400-e29b-41d4-a716-446655440000");
 
     EXPECT_EQ(response.status_code, 200);
@@ -187,7 +210,7 @@ TEST_F(APIEndpointTest, GetTicket_NotFound) {
 
 // Test delete ticket endpoint
 TEST_F(APIEndpointTest, DeleteTicket_Success) {
-    db->createTicket("550e8400-e29b-41d4-a716-446655440000");
+    db->createTicket("550e8400-e29b-41d4-a716-446655440000", -1);
     auto response = deleteTicketEndpoint("550e8400-e29b-41d4-a716-446655440000");
 
     EXPECT_EQ(response.status_code, 200);
@@ -205,61 +228,68 @@ TEST_F(APIEndpointTest, DeleteTicket_NotExists) {
 // Test access validation endpoint
 TEST_F(APIEndpointTest, ValidateAccess_Granted) {
     std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
-    db->createTicket(uuid);
+    db->createTicket(uuid, -1);
 
     auto result = validateAccessEndpoint(uuid, 1);
 
     EXPECT_TRUE(result.granted);
-    EXPECT_EQ(result.reason, "GRANTED");
+    EXPECT_EQ(result.reason, barcode_access::access_result_to_string(barcode_access::AccessResult::GRANTED));
     EXPECT_EQ(result.door_id, 1);
+    EXPECT_EQ(result.current_uses, 1);
+    EXPECT_EQ(result.max_uses, -1);
 
-    // Verify ticket is now used
-    auto ticket = db->getTicket(uuid);
-    EXPECT_TRUE(ticket->used);
+    // Verify ticket state in DB
+    auto ticket_db = db->getTicket(uuid);
+    ASSERT_TRUE(ticket_db.has_value());
+    EXPECT_TRUE(ticket_db->used); // Mark as used in mock
+    EXPECT_EQ(ticket_db->current_uses, 1);
 }
 
 TEST_F(APIEndpointTest, ValidateAccess_DeniedNotFound) {
     auto result = validateAccessEndpoint("550e8400-e29b-41d4-a716-446655440000", 1);
 
     EXPECT_FALSE(result.granted);
-    EXPECT_EQ(result.reason, "DENIED_NOT_FOUND");
+    EXPECT_EQ(result.reason, barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_NOT_FOUND));
 }
 
 TEST_F(APIEndpointTest, ValidateAccess_DeniedAlreadyUsed) {
     std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
-    db->createTicket(uuid);
-    db->markTicketUsed(uuid, 1);
+    db->createTicket(uuid, 1); // 1 use
+    db->markTicketUsed(uuid, 1); // Use it once, now it's fully used
 
     auto result = validateAccessEndpoint(uuid, 2);
 
     EXPECT_FALSE(result.granted);
-    EXPECT_EQ(result.reason, "DENIED_ALREADY_USED");
+    // The reason should now be DENIED_MAX_USES_REACHED if the service logic is correctly implemented
+    EXPECT_EQ(result.reason, barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_MAX_USES_REACHED));
 }
 
 TEST_F(APIEndpointTest, ValidateAccess_DeniedInvalidUUID) {
     auto result = validateAccessEndpoint("invalid-uuid", 1);
 
     EXPECT_FALSE(result.granted);
-    EXPECT_EQ(result.reason, "DENIED_INVALID_UUID");
+    EXPECT_EQ(result.reason, barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_INVALID_UUID));
 }
 
 // Test access logging
 TEST_F(APIEndpointTest, ValidateAccess_LogsGranted) {
     std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
-    db->createTicket(uuid);
+    db->createTicket(uuid, -1);
 
     validateAccessEndpoint(uuid, 1);
 
     auto logs = db->getLogsByTicket(uuid);
     ASSERT_EQ(logs.size(), 1);
     EXPECT_TRUE(logs[0].granted);
-    EXPECT_EQ(logs[0].reason, "GRANTED");
+    EXPECT_EQ(logs[0].reason, barcode_access::access_result_to_string(barcode_access::AccessResult::GRANTED));
 }
 
 TEST_F(APIEndpointTest, ValidateAccess_LogsDenied) {
-    auto result = validateAccessEndpoint("550e8400-e29b-41d4-a716-446655440000", 1);
+    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    auto result = validateAccessEndpoint(uuid, 1); // Try to validate a non-existent ticket
 
     EXPECT_EQ(db->getDeniedCount(), 1);
+    EXPECT_EQ(result.reason, barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_NOT_FOUND));
 }
 
 // Test multiple door access
@@ -269,10 +299,10 @@ TEST_F(APIEndpointTest, ValidateAccess_MultipleDoors) {
     std::string uuid3 = "550e8400-e29b-41d4-a716-446655440003";
     std::string uuid4 = "550e8400-e29b-41d4-a716-446655440004";
 
-    db->createTicket(uuid1);
-    db->createTicket(uuid2);
-    db->createTicket(uuid3);
-    db->createTicket(uuid4);
+    db->createTicket(uuid1, -1);
+    db->createTicket(uuid2, -1);
+    db->createTicket(uuid3, -1);
+    db->createTicket(uuid4, -1);
 
     EXPECT_TRUE(validateAccessEndpoint(uuid1, 1).granted);
     EXPECT_TRUE(validateAccessEndpoint(uuid2, 2).granted);
@@ -289,19 +319,26 @@ TEST_F(APIEndpointTest, ValidateAccess_MultipleDoors) {
 // Test same ticket on different doors
 TEST_F(APIEndpointTest, ValidateAccess_SameTicketDifferentDoors) {
     std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
-    db->createTicket(uuid);
+    db->createTicket(uuid, -1); // Unlimited uses
 
     // First access - granted
-    EXPECT_TRUE(validateAccessEndpoint(uuid, 1).granted);
+    auto r1 = validateAccessEndpoint(uuid, 1);
+    EXPECT_TRUE(r1.granted);
+    EXPECT_EQ(r1.current_uses, 1);
 
-    // Second access on different door - denied
-    EXPECT_FALSE(validateAccessEndpoint(uuid, 2).granted);
+    // Second access on different door - granted (unlimited uses)
+    auto r2 = validateAccessEndpoint(uuid, 2);
+    EXPECT_TRUE(r2.granted);
+    EXPECT_EQ(r2.current_uses, 2);
 
-    // Third access on yet another door - denied
-    EXPECT_FALSE(validateAccessEndpoint(uuid, 3).granted);
+    // Third access on yet another door - granted (unlimited uses)
+    auto r3 = validateAccessEndpoint(uuid, 3);
+    EXPECT_TRUE(r3.granted);
+    EXPECT_EQ(r3.current_uses, 3);
 
     auto logs = db->getLogsByTicket(uuid);
     EXPECT_EQ(logs.size(), 3);
+    EXPECT_EQ(db->getLogsByTicket(uuid).size(), 3);
 }
 
 // Test bulk ticket creation
@@ -309,21 +346,24 @@ TEST_F(APIEndpointTest, BulkCreate_MultipleTickets) {
     for (int i = 0; i < 100; i++) {
         char uuid[48];
         snprintf(uuid, sizeof(uuid), "550e8400-e29b-41d4-a716-%012d", i);
-        auto response = createTicketEndpoint(uuid);
+        auto response = createTicketEndpoint(uuid, (i % 2 == 0) ? -1 : 1); // Alternate unlimited and single use
         EXPECT_TRUE(response.success);
     }
 
     EXPECT_EQ(db->getTotalTickets(), 100);
-    EXPECT_EQ(db->getAvailableTickets(), 100);
+    // As `getAvailableTickets` and `getUsedTickets` are correctly implemented in mock now,
+    // we can check them
+    EXPECT_EQ(db->getAvailableTickets(), 50); // 50 unlimited, 50 single-use (all available)
+    EXPECT_EQ(db->getUsedTickets(), 0); // None are used yet
 }
 
 // Test concurrent-like access (sequential simulation)
 TEST_F(APIEndpointTest, SequentialAccess_HighVolume) {
-    // Create 50 tickets
+    // Create 50 tickets with 1 use each
     for (int i = 0; i < 50; i++) {
         char uuid[48];
         snprintf(uuid, sizeof(uuid), "550e8400-e29b-41d4-a716-%012d", i);
-        db->createTicket(uuid);
+        db->createTicket(uuid, 1);
     }
 
     // Use all of them across 4 doors
@@ -334,8 +374,10 @@ TEST_F(APIEndpointTest, SequentialAccess_HighVolume) {
 
         auto result = validateAccessEndpoint(uuid, door_id);
         EXPECT_TRUE(result.granted);
+        EXPECT_EQ(result.current_uses, 1);
+        EXPECT_EQ(result.max_uses, 1);
     }
 
-    EXPECT_EQ(db->getUsedTickets(), 50);
+    EXPECT_EQ(db->getUsedTickets(), 50); // All 50 are now used
     EXPECT_EQ(db->getGrantedCount(), 50);
 }

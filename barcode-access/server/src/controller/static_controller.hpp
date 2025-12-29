@@ -64,18 +64,39 @@ public:
         return response;
     }
 
-    // Serve static files
-    ENDPOINT("GET", "/static/{path}", staticFile,
-             PATH(String, path)) {
-        std::string filePath = webRoot_ + "/static/" + path->c_str();
-        auto content = readFile(filePath);
-        if (content.empty()) {
-            return createResponse(Status::CODE_404, "Not Found");
+        // Serve static files
+
+        ENDPOINT("GET", "/static/*", staticFile,
+
+                 REQUEST(std::shared_ptr<IncomingRequest>, request))
+
+        {
+
+            auto path = request->getPathTail();
+
+            if (!path || path->empty()) {
+
+                return createResponse(Status::CODE_404, "Not Found");
+
+            }
+
+            std::string filePath = webRoot_ + "/static/" + path->c_str();
+
+            auto content = readFile(filePath);
+
+            if (content.empty()) {
+
+                return createResponse(Status::CODE_404, "Not Found");
+
+            }
+
+            auto response = createResponse(Status::CODE_200, content);
+
+            response->putHeader("Content-Type", getContentType(filePath));
+
+            return response;
+
         }
-        auto response = createResponse(Status::CODE_200, content);
-        response->putHeader("Content-Type", getContentType(filePath));
-        return response;
-    }
 };
 
 } // namespace controller

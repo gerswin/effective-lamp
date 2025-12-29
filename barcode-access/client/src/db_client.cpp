@@ -175,6 +175,22 @@ ValidationResponse AccessClient::validateTicket(const std::string& uuid, int doo
     return vr;
 }
 
+bool AccessClient::rollbackUsage(const std::string& uuid, int door_id) {
+    // Build JSON request
+    std::ostringstream json;
+    json << "{\"uuid\":\"" << uuid << "\",\"door_id\":" << door_id << "}";
+
+    std::string url = server_url_ + "/api/access/rollback";
+    std::string response;
+
+    if (!performRequest(url, "POST", json.str(), &response)) {
+        return false;
+    }
+
+    // Parse response
+    return extractJsonBool(response, "success");
+}
+
 bool AccessClient::testConnection() {
     std::string url = server_url_ + "/api/stats";
     std::string response;

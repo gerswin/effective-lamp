@@ -54,6 +54,7 @@
                 <h2>Agregar Nuevo Ticket</h2>
                 <form id="add-ticket-form" class="form-inline">
                     <input type="text" id="ticket-uuid" placeholder="UUID del ticket (ej: 550e8400-e29b-41d4-a716-446655440000)" required>
+                    <input type="number" id="ticket-max-uses" placeholder="Usos máximos (-1 para ilimitado)" value="-1">
                     <button type="submit" class="btn btn-primary">Agregar</button>
                     <button type="button" class="btn btn-secondary" id="generate-uuid">Generar UUID</button>
                 </form>
@@ -75,6 +76,8 @@
                         <tr>
                             <th>UUID</th>
                             <th>Estado</th>
+                            <th>Max Usos</th>
+                            <th>Usos Actuales</th>
                             <th>Usado En</th>
                             <th>Puerta</th>
                             <th>Creado</th>

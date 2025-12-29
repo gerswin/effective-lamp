@@ -35,6 +35,7 @@ public:
         }
 
         std::string uuid = ticketDto->uuid;
+        int max_uses = ticketDto->max_uses;
 
         if (!barcode_access::is_valid_uuid(uuid)) {
             response->success = false;
@@ -42,12 +43,14 @@ public:
             return createDtoResponse(Status::CODE_400, response);
         }
 
-        if (ticketService.createTicket(uuid)) {
+        if (ticketService.createTicket(uuid, max_uses)) {
             auto ticketInfo = ticketService.getTicket(uuid);
             if (ticketInfo) {
                 auto ticket = dto::TicketDto::createShared();
                 ticket->uuid = ticketInfo->uuid;
                 ticket->used = ticketInfo->used;
+                ticket->max_uses = ticketInfo->max_uses;
+                ticket->current_uses = ticketInfo->current_uses;
                 ticket->used_at = ticketInfo->used_at;
                 ticket->used_at_door = ticketInfo->used_at_door;
                 ticket->created_at = ticketInfo->created_at;
@@ -75,6 +78,8 @@ public:
             auto ticket = dto::TicketDto::createShared();
             ticket->uuid = ticketInfo->uuid;
             ticket->used = ticketInfo->used;
+            ticket->max_uses = ticketInfo->max_uses;
+            ticket->current_uses = ticketInfo->current_uses;
             ticket->used_at = ticketInfo->used_at;
             ticket->used_at_door = ticketInfo->used_at_door;
             ticket->created_at = ticketInfo->created_at;
@@ -92,12 +97,14 @@ public:
     // List all tickets
     ENDPOINT("GET", "/api/tickets", listTickets,
              QUERY(Int32, limit, "limit", 100),
-             QUERY(Int32, offset, "offset", 0)) {
+             QUERY(Int32, offset, "offset", 0),
+             QUERY(String, filter, "filter", "all"),
+             QUERY(String, search, "search", "")) {
 
         auto& ticketService = service::TicketService::getInstance();
         auto response = dto::TicketListResponseDto::createShared();
 
-        auto tickets = ticketService.getAllTickets(limit, offset);
+        auto tickets = ticketService.getAllTickets(limit, offset, filter->c_str(), search->c_str());
 
         response->success = true;
         response->total = ticketService.getTotalCount();
@@ -109,6 +116,8 @@ public:
             auto ticket = dto::TicketDto::createShared();
             ticket->uuid = ti.uuid;
             ticket->used = ti.used;
+            ticket->max_uses = ti.max_uses;
+            ticket->current_uses = ti.current_uses;
             ticket->used_at = ti.used_at;
             ticket->used_at_door = ti.used_at_door;
             ticket->created_at = ti.created_at;

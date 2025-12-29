@@ -25,7 +25,7 @@ static std::string getCurrentTimestamp() {
     return std::string(buffer);
 }
 
-bool MockDatabase::createTicket(const std::string& uuid) {
+bool MockDatabase::createTicket(const std::string& uuid, int max_uses) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (tickets_.find(uuid) != tickets_.end()) {
@@ -35,6 +35,8 @@ bool MockDatabase::createTicket(const std::string& uuid) {
     MockTicket ticket;
     ticket.uuid = uuid;
     ticket.used = false;
+    ticket.max_uses = max_uses;
+    ticket.current_uses = 0;
     ticket.created_at = getCurrentTimestamp();
 
     tickets_[uuid] = ticket;
@@ -84,7 +86,19 @@ bool MockDatabase::markTicketUsed(const std::string& uuid, int door_id) {
         return false;
     }
 
-    it->second.used = true;
+    // Increment current uses
+    it->second.current_uses++;
+
+    // Update used status if max_uses is reached (and not unlimited)
+    if (it->second.max_uses != -1 && it->second.current_uses >= it->second.max_uses) {
+        it->second.used = true;
+    } else if (it->second.max_uses == -1) {
+        // For unlimited tickets, mark as used if it's the first use
+        if (it->second.current_uses == 1) {
+            it->second.used = true;
+        }
+    }
+
     it->second.used_at = getCurrentTimestamp();
     it->second.used_at_door = door_id;
     return true;
@@ -98,13 +112,19 @@ int MockDatabase::getTotalTickets() const {
 int MockDatabase::getUsedTickets() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return static_cast<int>(std::count_if(tickets_.begin(), tickets_.end(),
-        [](const auto& pair) { return pair.second.used; }));
+        [](const auto& pair) {
+            const auto& ticket = pair.second;
+            return ticket.used || (ticket.max_uses != -1 && ticket.current_uses >= ticket.max_uses);
+        }));
 }
 
 int MockDatabase::getAvailableTickets() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return static_cast<int>(std::count_if(tickets_.begin(), tickets_.end(),
-        [](const auto& pair) { return !pair.second.used; }));
+        [](const auto& pair) {
+            const auto& ticket = pair.second;
+            return !ticket.used && (ticket.max_uses == -1 || ticket.current_uses < ticket.max_uses);
+        }));
 }
 
 bool MockDatabase::logAccess(const std::string& uuid, int door_id, bool granted, const std::string& reason) {

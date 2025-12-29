@@ -2,9 +2,9 @@
 -- Database initialization script for PostgreSQL
 
 -- Create database (run as postgres superuser)
--- CREATE DATABASE barcode_access;
--- CREATE USER access_user WITH ENCRYPTED PASSWORD 'your_secure_password';
--- GRANT ALL PRIVILEGES ON DATABASE barcode_access TO access_user;
+CREATE DATABASE barcode_access;
+CREATE USER kubo WITH ENCRYPTED PASSWORD 'K8u!b0_92x#ZqL';
+GRANT ALL PRIVILEGES ON DATABASE barcode_access TO kubo;
 
 -- Connect to barcode_access database and run the following:
 
@@ -15,6 +15,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE IF NOT EXISTS tickets (
     uuid UUID PRIMARY KEY,
     used BOOLEAN DEFAULT FALSE,
+    max_uses INTEGER DEFAULT -1,      -- -1 for unlimited uses
+    current_uses INTEGER DEFAULT 0,  -- Current number of uses
     used_at TIMESTAMP WITH TIME ZONE NULL,
     used_at_door INTEGER NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -42,8 +44,8 @@ CREATE INDEX IF NOT EXISTS idx_access_logs_scanned_at ON access_logs(scanned_at)
 CREATE INDEX IF NOT EXISTS idx_access_logs_granted ON access_logs(granted);
 
 -- Grant permissions to access_user
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO access_user;
-GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO access_user;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO kubo;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO kubo;
 
 -- Sample data for testing (optional)
 -- INSERT INTO tickets (uuid) VALUES

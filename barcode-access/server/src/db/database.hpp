@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <libpq-fe.h>
+#include <mutex>
 #include "common.hpp"
 
 namespace db {
@@ -35,7 +36,11 @@ private:
     Database(const Database&) = delete;
     Database& operator=(const Database&) = delete;
 
+    bool reconnect();
+
     PGconn* conn_ = nullptr;
+    barcode_access::DatabaseConfig m_config;
+    std::recursive_mutex m_mutex;
 };
 
 // RAII wrapper for PGresult

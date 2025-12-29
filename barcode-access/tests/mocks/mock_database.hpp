@@ -7,19 +7,10 @@
 #include <optional>
 #include <mutex>
 #include "common.hpp"
+#include "dto/access_log_dto.hpp"
 
 namespace mocks {
 
-// In-memory ticket storage for testing
-struct MockTicket {
-    std::string uuid;
-    bool used = false;
-    std::string used_at;
-    int used_at_door = 0;
-    std::string created_at;
-};
-
-// In-memory access log storage for testing
 struct MockAccessLog {
     int64_t id;
     std::string ticket_uuid;
@@ -30,6 +21,16 @@ struct MockAccessLog {
     std::string scanned_at;
 };
 
+struct MockTicket {
+    std::string uuid;
+    bool used = false;
+    int max_uses = -1; // -1 for unlimited uses
+    int current_uses = 0;
+    std::string used_at;
+    int used_at_door = 0;
+    std::string created_at;
+};
+
 class MockDatabase {
 public:
     static MockDatabase& getInstance();
@@ -38,7 +39,7 @@ public:
     void reset();
 
     // Ticket operations
-    bool createTicket(const std::string& uuid);
+    bool createTicket(const std::string& uuid, int max_uses = -1);
     std::optional<MockTicket> getTicket(const std::string& uuid);
     std::vector<MockTicket> getAllTickets(int limit = 100, int offset = 0);
     bool deleteTicket(const std::string& uuid);
