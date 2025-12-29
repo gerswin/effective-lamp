@@ -26,8 +26,9 @@ void DiscoveryService::stop() {
     if (!running_) return;
     running_ = false;
     
-    // Close socket to unblock recvfrom
+    // Shutdown and close socket to unblock recvfrom
     if (socketFd_ >= 0) {
+        shutdown(socketFd_, SHUT_RDWR);
         close(socketFd_);
         socketFd_ = -1;
     }
@@ -46,9 +47,15 @@ void DiscoveryService::run() {
         return;
     }
 
-    // Set SO_REUSEADDR to allow restarting quickly
+    // Set SO_REUSEADDR
     int opt = 1;
     setsockopt(socketFd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+
+    // Set Receive Timeout (1 second) to allow checking running_ flag periodically
+    struct timeval tv;
+    tv.tv_sec = 1;
+    tv.tv_usec = 0;
+    setsockopt(socketFd_, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
 
     sockaddr_in serverAddr{};
     serverAddr.sin_family = AF_INET;

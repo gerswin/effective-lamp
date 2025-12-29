@@ -160,10 +160,15 @@ void run(const barcode_access::ServerConfig& config) {
     }
 
     // Stop server
+    std::cout << "Stopping HTTP server..." << std::endl;
     server.stop();
+    std::cout << "Stopping connection provider..." << std::endl;
     connectionProvider->stop();
+    std::cout << "Stopping discovery service..." << std::endl;
     discoveryService.stop();
+    std::cout << "Joining server thread..." << std::endl;
     serverThread.join();
+    std::cout << "Server thread joined." << std::endl;
 
     // Destroy Oat++ Environment
     oatpp::base::Environment::destroy();
