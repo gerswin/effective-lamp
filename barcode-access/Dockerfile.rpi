@@ -1,5 +1,5 @@
-# Usamos Debian Bullseye porque tiene mejor soporte legacy para ARMv6 (Pi Zero original)
-FROM debian:bullseye
+# Usamos balenalib/rpi-raspbian:bullseye porque tiene soporte nativo para ARMv6 (Pi Zero original)
+FROM balenalib/rpi-raspbian:bullseye
 
 # Evitar preguntas interactivas durante la instalación
 ENV DEBIAN_FRONTEND=noninteractive

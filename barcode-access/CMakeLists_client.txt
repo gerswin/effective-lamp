@@ -1,0 +1,45 @@
+cmake_minimum_required(VERSION 3.16)
+project(barcode-access-client VERSION 1.0.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Find required packages
+find_package(CURL REQUIRED)
+find_package(Threads REQUIRED)
+
+# Include directories
+include_directories(${CMAKE_SOURCE_DIR}/common/include)
+include_directories(${CURL_INCLUDE_DIRS})
+
+# Client sources
+set(CLIENT_SOURCES
+    client/src/main.cpp
+    client/src/barcode_reader.cpp
+    client/src/hikvision_isapi.cpp
+    client/src/db_client.cpp
+)
+
+add_executable(access-client ${CLIENT_SOURCES})
+
+target_include_directories(access-client PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/client/src
+    ${CURL_INCLUDE_DIRS}
+)
+
+target_link_libraries(access-client
+    ${CURL_LIBRARIES}
+    Threads::Threads
+    atomic
+)
+
+# Link evdev if available (for USB HID reading)
+find_library(EVDEV_LIB evdev)
+if(EVDEV_LIB)
+    target_link_libraries(access-client ${EVDEV_LIB})
+    target_compile_definitions(access-client PRIVATE HAS_EVDEV)
+else()
+    message(WARNING "libevdev not found. HID barcode reading might not work.")
+endif()
+
+install(TARGETS access-client RUNTIME DESTINATION bin)

@@ -48,12 +48,17 @@ set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
 FetchContent_MakeAvailable(googletest)
 
 # Enable testing
-enable_testing()
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    enable_testing()
+endif()
 
 # Subdirectories
 add_subdirectory(server)
 add_subdirectory(client)
-add_subdirectory(tests)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
 
 # Install targets
 install(TARGETS access-server access-client

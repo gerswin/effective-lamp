@@ -16,6 +16,7 @@ target_link_libraries(access-client
     ${CURL_LIBRARIES}
     ${LIBPQ_LIBRARIES}
     Threads::Threads
+    atomic
 )
 
 # Link evdev if available (for USB HID reading)

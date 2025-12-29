@@ -21,6 +21,7 @@ target_link_libraries(access-server
     oatpp-postgresql
     ${LIBPQ_LIBRARIES}
     Threads::Threads
+    atomic
 )
 
 # Copy web files to build directory
