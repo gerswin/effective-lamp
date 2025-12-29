@@ -20,28 +20,28 @@ protected:
 
 // Test logging access attempts
 TEST_F(AccessLogServiceTest, LogAccess_Granted) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    std::string code = "V1StGXR8_Z";
 
-    EXPECT_TRUE(db->logAccess(uuid, 1, true, "GRANTED"));
+    EXPECT_TRUE(db->logAccess(code, 1, true, "GRANTED"));
     EXPECT_EQ(db->getTotalAttempts(), 1);
     EXPECT_EQ(db->getGrantedCount(), 1);
     EXPECT_EQ(db->getDeniedCount(), 0);
 }
 
 TEST_F(AccessLogServiceTest, LogAccess_Denied) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    std::string code = "V1StGXR8_Z";
 
-    EXPECT_TRUE(db->logAccess(uuid, 1, false, "DENIED_NOT_FOUND"));
+    EXPECT_TRUE(db->logAccess(code, 1, false, "DENIED_NOT_FOUND"));
     EXPECT_EQ(db->getTotalAttempts(), 1);
     EXPECT_EQ(db->getGrantedCount(), 0);
     EXPECT_EQ(db->getDeniedCount(), 1);
 }
 
 TEST_F(AccessLogServiceTest, LogAccess_MultipleAttempts) {
-    EXPECT_TRUE(db->logAccess("uuid1", 1, true, "GRANTED"));
-    EXPECT_TRUE(db->logAccess("uuid2", 2, false, "DENIED_NOT_FOUND"));
-    EXPECT_TRUE(db->logAccess("uuid3", 3, true, "GRANTED"));
-    EXPECT_TRUE(db->logAccess("uuid4", 4, false, "DENIED_ALREADY_USED"));
+    EXPECT_TRUE(db->logAccess("code1", 1, true, "GRANTED"));
+    EXPECT_TRUE(db->logAccess("code2", 2, false, "DENIED_NOT_FOUND"));
+    EXPECT_TRUE(db->logAccess("code3", 3, true, "GRANTED"));
+    EXPECT_TRUE(db->logAccess("code4", 4, false, "DENIED_ALREADY_USED"));
 
     EXPECT_EQ(db->getTotalAttempts(), 4);
     EXPECT_EQ(db->getGrantedCount(), 2);
@@ -55,8 +55,8 @@ TEST_F(AccessLogServiceTest, GetAllLogs_Empty) {
 }
 
 TEST_F(AccessLogServiceTest, GetAllLogs_WithLogs) {
-    db->logAccess("uuid1", 1, true, "GRANTED");
-    db->logAccess("uuid2", 2, false, "DENIED");
+    db->logAccess("code1", 1, true, "GRANTED");
+    db->logAccess("code2", 2, false, "DENIED");
 
     auto logs = db->getAllLogs();
     EXPECT_EQ(logs.size(), 2);
@@ -64,7 +64,7 @@ TEST_F(AccessLogServiceTest, GetAllLogs_WithLogs) {
 
 TEST_F(AccessLogServiceTest, GetAllLogs_Pagination) {
     for (int i = 0; i < 10; i++) {
-        db->logAccess("uuid" + std::to_string(i), 1, true, "GRANTED");
+        db->logAccess("code" + std::to_string(i), 1, true, "GRANTED");
     }
 
     auto page1 = db->getAllLogs(5, 0);
@@ -78,9 +78,9 @@ TEST_F(AccessLogServiceTest, GetAllLogs_Pagination) {
 }
 
 TEST_F(AccessLogServiceTest, GetAllLogs_OrderByNewest) {
-    db->logAccess("uuid1", 1, true, "FIRST");
-    db->logAccess("uuid2", 1, true, "SECOND");
-    db->logAccess("uuid3", 1, true, "THIRD");
+    db->logAccess("code1", 1, true, "FIRST");
+    db->logAccess("code2", 1, true, "SECOND");
+    db->logAccess("code3", 1, true, "THIRD");
 
     auto logs = db->getAllLogs();
     ASSERT_EQ(logs.size(), 3);
@@ -98,11 +98,11 @@ TEST_F(AccessLogServiceTest, GetLogsByDoor_Empty) {
 }
 
 TEST_F(AccessLogServiceTest, GetLogsByDoor_FilterCorrectly) {
-    db->logAccess("uuid1", 1, true, "GRANTED");
-    db->logAccess("uuid2", 2, true, "GRANTED");
-    db->logAccess("uuid3", 1, true, "GRANTED");
-    db->logAccess("uuid4", 3, true, "GRANTED");
-    db->logAccess("uuid5", 1, false, "DENIED");
+    db->logAccess("code1", 1, true, "GRANTED");
+    db->logAccess("code2", 2, true, "GRANTED");
+    db->logAccess("code3", 1, true, "GRANTED");
+    db->logAccess("code4", 3, true, "GRANTED");
+    db->logAccess("code5", 1, false, "DENIED");
 
     auto door1Logs = db->getLogsByDoor(1);
     EXPECT_EQ(door1Logs.size(), 3);
@@ -118,10 +118,10 @@ TEST_F(AccessLogServiceTest, GetLogsByDoor_FilterCorrectly) {
 }
 
 TEST_F(AccessLogServiceTest, GetLogsByDoor_AllFourDoors) {
-    db->logAccess("uuid1", 1, true, "GRANTED");
-    db->logAccess("uuid2", 2, true, "GRANTED");
-    db->logAccess("uuid3", 3, true, "GRANTED");
-    db->logAccess("uuid4", 4, true, "GRANTED");
+    db->logAccess("code1", 1, true, "GRANTED");
+    db->logAccess("code2", 2, true, "GRANTED");
+    db->logAccess("code3", 3, true, "GRANTED");
+    db->logAccess("code4", 4, true, "GRANTED");
 
     EXPECT_EQ(db->getLogsByDoor(1).size(), 1);
     EXPECT_EQ(db->getLogsByDoor(2).size(), 1);
@@ -131,51 +131,51 @@ TEST_F(AccessLogServiceTest, GetLogsByDoor_AllFourDoors) {
 
 // Test filtering logs by ticket
 TEST_F(AccessLogServiceTest, GetLogsByTicket_Empty) {
-    auto logs = db->getLogsByTicket("nonexistent-uuid");
+    auto logs = db->getLogsByTicket("nonexistent-code");
     EXPECT_TRUE(logs.empty());
 }
 
 TEST_F(AccessLogServiceTest, GetLogsByTicket_SingleAttempt) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
-    db->logAccess(uuid, 1, true, "GRANTED");
+    std::string code = "V1StGXR8_Z";
+    db->logAccess(code, 1, true, "GRANTED");
 
-    auto logs = db->getLogsByTicket(uuid);
+    auto logs = db->getLogsByTicket(code);
     ASSERT_EQ(logs.size(), 1);
-    EXPECT_EQ(logs[0].ticket_uuid, uuid);
+    EXPECT_EQ(logs[0].ticket_uuid, code);
     EXPECT_TRUE(logs[0].granted);
 }
 
 TEST_F(AccessLogServiceTest, GetLogsByTicket_MultipleAttempts) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    std::string code = "V1StGXR8_Z";
 
-    db->logAccess(uuid, 1, true, "GRANTED");
-    db->logAccess(uuid, 2, false, "DENIED_ALREADY_USED");
-    db->logAccess(uuid, 3, false, "DENIED_ALREADY_USED");
+    db->logAccess(code, 1, true, "GRANTED");
+    db->logAccess(code, 2, false, "DENIED_ALREADY_USED");
+    db->logAccess(code, 3, false, "DENIED_ALREADY_USED");
 
-    auto logs = db->getLogsByTicket(uuid);
+    auto logs = db->getLogsByTicket(code);
     EXPECT_EQ(logs.size(), 3);
 }
 
 // Test attempt counting
 TEST_F(AccessLogServiceTest, GetAttemptCount_NoAttempts) {
-    EXPECT_EQ(db->getAttemptCount("nonexistent-uuid"), 0);
+    EXPECT_EQ(db->getAttemptCount("nonexistent-code"), 0);
 }
 
 TEST_F(AccessLogServiceTest, GetAttemptCount_SingleAttempt) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
-    db->logAccess(uuid, 1, true, "GRANTED");
+    std::string code = "V1StGXR8_Z";
+    db->logAccess(code, 1, true, "GRANTED");
 
-    EXPECT_EQ(db->getAttemptCount(uuid), 1);
+    EXPECT_EQ(db->getAttemptCount(code), 1);
 }
 
 TEST_F(AccessLogServiceTest, GetAttemptCount_MultipleAttempts) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    std::string code = "V1StGXR8_Z";
 
-    db->logAccess(uuid, 1, true, "GRANTED");
-    db->logAccess(uuid, 1, false, "DENIED");
-    db->logAccess(uuid, 2, false, "DENIED");
+    db->logAccess(code, 1, true, "GRANTED");
+    db->logAccess(code, 1, false, "DENIED");
+    db->logAccess(code, 2, false, "DENIED");
 
-    EXPECT_EQ(db->getAttemptCount(uuid), 3);
+    EXPECT_EQ(db->getAttemptCount(code), 3);
 }
 
 // Test statistics
@@ -186,11 +186,11 @@ TEST_F(AccessLogServiceTest, Stats_Initial) {
 }
 
 TEST_F(AccessLogServiceTest, Stats_MixedResults) {
-    db->logAccess("uuid1", 1, true, "GRANTED");
-    db->logAccess("uuid2", 1, true, "GRANTED");
-    db->logAccess("uuid3", 1, true, "GRANTED");
-    db->logAccess("uuid4", 1, false, "DENIED_NOT_FOUND");
-    db->logAccess("uuid5", 1, false, "DENIED_ALREADY_USED");
+    db->logAccess("code1", 1, true, "GRANTED");
+    db->logAccess("code2", 1, true, "GRANTED");
+    db->logAccess("code3", 1, true, "GRANTED");
+    db->logAccess("code4", 1, false, "DENIED_NOT_FOUND");
+    db->logAccess("code5", 1, false, "DENIED_ALREADY_USED");
 
     EXPECT_EQ(db->getTotalAttempts(), 5);
     EXPECT_EQ(db->getGrantedCount(), 3);
@@ -199,51 +199,51 @@ TEST_F(AccessLogServiceTest, Stats_MixedResults) {
 
 // Test complete access flow
 TEST_F(AccessLogServiceTest, CompleteFlow_SuccessfulAccess) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    std::string code = "V1StGXR8_Z";
     int door_id = 1;
 
     // Create and use ticket
-    db->createTicket(uuid);
-    db->markTicketUsed(uuid, door_id);
-    db->logAccess(uuid, door_id, true, "GRANTED");
+    db->createTicket(code);
+    db->markTicketUsed(code, door_id);
+    db->logAccess(code, door_id, true, "GRANTED");
 
     // Verify log
-    auto logs = db->getLogsByTicket(uuid);
+    auto logs = db->getLogsByTicket(code);
     ASSERT_EQ(logs.size(), 1);
     EXPECT_TRUE(logs[0].granted);
     EXPECT_EQ(logs[0].door_id, door_id);
 }
 
 TEST_F(AccessLogServiceTest, CompleteFlow_RepeatedAttempts) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    std::string code = "V1StGXR8_Z";
 
     // First attempt - success
-    db->createTicket(uuid);
-    db->markTicketUsed(uuid, 1);
-    db->logAccess(uuid, 1, true, "GRANTED");
+    db->createTicket(code);
+    db->markTicketUsed(code, 1);
+    db->logAccess(code, 1, true, "GRANTED");
 
     // Second attempt - denied (already used)
-    db->logAccess(uuid, 1, false, "DENIED_ALREADY_USED");
+    db->logAccess(code, 1, false, "DENIED_ALREADY_USED");
 
     // Third attempt on different door - still denied
-    db->logAccess(uuid, 2, false, "DENIED_ALREADY_USED");
+    db->logAccess(code, 2, false, "DENIED_ALREADY_USED");
 
-    auto logs = db->getLogsByTicket(uuid);
+    auto logs = db->getLogsByTicket(code);
     EXPECT_EQ(logs.size(), 3);
-    EXPECT_EQ(db->getAttemptCount(uuid), 3);
+    EXPECT_EQ(db->getAttemptCount(code), 3);
 }
 
 // Test log content
 TEST_F(AccessLogServiceTest, LogContent_Complete) {
-    std::string uuid = "550e8400-e29b-41d4-a716-446655440000";
+    std::string code = "V1StGXR8_Z";
 
-    db->logAccess(uuid, 2, true, "GRANTED");
+    db->logAccess(code, 2, true, "GRANTED");
 
     auto logs = db->getAllLogs();
     ASSERT_EQ(logs.size(), 1);
 
     const auto& log = logs[0];
-    EXPECT_EQ(log.ticket_uuid, uuid);
+    EXPECT_EQ(log.ticket_uuid, code);
     EXPECT_EQ(log.door_id, 2);
     EXPECT_TRUE(log.granted);
     EXPECT_EQ(log.reason, "GRANTED");
@@ -254,9 +254,9 @@ TEST_F(AccessLogServiceTest, LogContent_Complete) {
 
 // Test log IDs are sequential
 TEST_F(AccessLogServiceTest, LogIDs_Sequential) {
-    db->logAccess("uuid1", 1, true, "GRANTED");
-    db->logAccess("uuid2", 1, true, "GRANTED");
-    db->logAccess("uuid3", 1, true, "GRANTED");
+    db->logAccess("code1", 1, true, "GRANTED");
+    db->logAccess("code2", 1, true, "GRANTED");
+    db->logAccess("code3", 1, true, "GRANTED");
 
     auto logs = db->getAllLogs(100, 0);
 
