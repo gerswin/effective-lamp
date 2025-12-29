@@ -140,8 +140,8 @@ void run(const barcode_access::ServerConfig& config) {
     std::cout << "API endpoints:" << std::endl;
     std::cout << "  POST /api/tickets          - Create ticket" << std::endl;
     std::cout << "  GET  /api/tickets          - List tickets" << std::endl;
-    std::cout << "  GET  /api/tickets/{uuid}   - Get ticket" << std::endl;
-    std::cout << "  DELETE /api/tickets/{uuid} - Delete ticket" << std::endl;
+    std::cout << "  GET  /api/tickets/{code}   - Get ticket" << std::endl;
+    std::cout << "  DELETE /api/tickets/{code} - Delete ticket" << std::endl;
     std::cout << "  POST /api/access/validate  - Validate & use ticket" << std::endl;
     std::cout << "  GET  /api/access/logs      - Get access logs" << std::endl;
     std::cout << "  GET  /api/stats            - Get statistics" << std::endl;
