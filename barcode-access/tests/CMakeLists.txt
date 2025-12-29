@@ -2,7 +2,7 @@
 
 # Unit tests executable
 add_executable(unit_tests
-    unit/test_uuid_validation.cpp
+    unit/test_ticket_code_validation.cpp
     unit/test_ticket_service.cpp
     unit/test_access_log_service.cpp
     unit/test_barcode_reader.cpp
