@@ -191,6 +191,33 @@ bool AccessClient::rollbackUsage(const std::string& uuid, int door_id) {
     return extractJsonBool(response, "success");
 }
 
+ProvisionConfig AccessClient::provision(const std::string& hardwareId) {
+    ProvisionConfig config;
+    config.success = false;
+
+    // Build JSON request
+    std::ostringstream json;
+    json << "{\"hardware_id\":\"" << hardwareId << "\"}";
+
+    std::string url = server_url_ + "/api/provision";
+    std::string response;
+
+    if (!performRequest(url, "POST", json.str(), &response)) {
+        std::cerr << "Provisioning failed: " << last_error_ << std::endl;
+        return config;
+    }
+
+    // Parse response
+    config.door_id = extractJsonInt(response, "door_id");
+    config.hik_host = extractJsonString(response, "hik_host");
+    config.hik_port = extractJsonInt(response, "hik_port");
+    config.hik_user = extractJsonString(response, "hik_user");
+    config.hik_password = extractJsonString(response, "hik_password");
+    config.success = true;
+
+    return config;
+}
+
 bool AccessClient::testConnection() {
     std::string url = server_url_ + "/api/stats";
     std::string response;

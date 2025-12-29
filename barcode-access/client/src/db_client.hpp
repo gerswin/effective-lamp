@@ -13,6 +13,15 @@ struct ValidationResponse {
     int door_id;
 };
 
+struct ProvisionConfig {
+    int door_id;
+    std::string hik_host;
+    int hik_port;
+    std::string hik_user;
+    std::string hik_password;
+    bool success;
+};
+
 class AccessClient {
 public:
     explicit AccessClient(const std::string& server_url);
@@ -26,6 +35,9 @@ public:
 
     // Rollback usage if door failed to open
     bool rollbackUsage(const std::string& uuid, int door_id);
+
+    // Auto-provision client configuration
+    ProvisionConfig provision(const std::string& hardwareId);
 
     // Test connection to server
     bool testConnection();

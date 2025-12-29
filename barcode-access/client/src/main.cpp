@@ -3,6 +3,7 @@
 #include "barcode_reader.hpp"
 #include "hikvision_isapi.hpp"
 #include "db_client.hpp"
+#include "discovery_client.hpp"
 #include "common.hpp"
 
 #include <iostream>
@@ -12,6 +13,8 @@
 #include <cstdlib>
 #include <thread>
 #include <chrono>
+#include <random>
+#include <iomanip>
 
 // Global flag for signal handling
 std::atomic<bool> running{true};
@@ -22,11 +25,40 @@ void signalHandler(int signum) {
 }
 
 struct ClientConfig {
-    int door_id = 1;
+    int door_id = 0; // 0 means unconfigured
     std::string input_device = "/dev/input/event0";
-    std::string server_url = "http://localhost:8080";
+    std::string server_url = "auto";
     barcode_access::HikvisionConfig hikvision;
 };
+
+// Generate a random hex string
+std::string generateRandomHex(int length) {
+    static const char hex_chars[] = "0123456789abcdef";
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 15);
+    
+    std::string s;
+    for (int i = 0; i < length; ++i) {
+        s += hex_chars[dis(gen)];
+    }
+    return s;
+}
+
+std::string getOrCreateHardwareId() {
+    const std::string filename = ".device_id";
+    std::ifstream file(filename);
+    std::string id;
+    if (file.is_open() && std::getline(file, id) && !id.empty()) {
+        return id;
+    }
+    
+    // Generate new ID
+    id = generateRandomHex(16);
+    std::ofstream outfile(filename);
+    outfile << id;
+    return id;
+}
 
 ClientConfig loadConfig(const std::string& configPath) {
     ClientConfig config;
@@ -73,6 +105,22 @@ ClientConfig loadConfig(const std::string& configPath) {
     return config;
 }
 
+void saveConfigToFile(const std::string& configPath, const ClientConfig& config) {
+    std::ofstream file(configPath);
+    if (!file.is_open()) return;
+    
+    file << "# Auto-generated config\n";
+    file << "door.id=" << config.door_id << "\n";
+    file << "input.device=" << config.input_device << "\n";
+    file << "server.url=" << config.server_url << "\n";
+    file << "\n";
+    file << "# Hikvision Controller\n";
+    file << "hikvision.host=" << config.hikvision.host << "\n";
+    file << "hikvision.port=" << config.hikvision.port << "\n";
+    file << "hikvision.username=" << config.hikvision.username << "\n";
+    file << "hikvision.password=" << config.hikvision.password << "\n";
+}
+
 void printBanner(const ClientConfig& config) {
     std::cout << "========================================" << std::endl;
     std::cout << "  Barcode Access Control Client" << std::endl;
@@ -82,9 +130,6 @@ void printBanner(const ClientConfig& config) {
     std::cout << "Server URL: " << config.server_url << std::endl;
     std::cout << "Hikvision: " << config.hikvision.host << ":" << config.hikvision.port << std::endl;
     std::cout << "========================================" << std::endl;
-    std::cout << "Waiting for barcode scans..." << std::endl;
-    std::cout << "Press Ctrl+C to stop" << std::endl;
-    std::cout << std::endl;
 }
 
 int main(int argc, char* argv[]) {
@@ -92,28 +137,75 @@ int main(int argc, char* argv[]) {
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
-    // Load configuration
+    // Initialize CURL globally
+    curl_global_init(CURL_GLOBAL_DEFAULT);
+
     std::string configPath = "client.ini";
     if (argc > 1) {
         configPath = argv[1];
     }
 
     ClientConfig config = loadConfig(configPath);
-    printBanner(config);
+    std::string hardwareId = getOrCreateHardwareId();
+    std::cout << "Hardware ID: " << hardwareId << std::endl;
 
-    // Initialize CURL globally
-    curl_global_init(CURL_GLOBAL_DEFAULT);
+    // 1. Auto-Discovery
+    if (config.server_url == "auto" || config.server_url.empty()) {
+        std::cout << "Searching for server (UDP Broadcast)..." << std::endl;
+        client::DiscoveryClient discovery;
+        while (running && (config.server_url == "auto" || config.server_url.empty())) {
+            std::string url = discovery.findServer(3000); // 3s timeout
+            if (!url.empty()) {
+                config.server_url = url;
+                std::cout << "Found server at: " << url << std::endl;
+            } else {
+                std::cout << "Server not found. Retrying..." << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+        }
+    }
+    
+    if (!running) return 0;
 
-    // Initialize access client (connects to central server)
+    // Initialize access client
     client::AccessClient accessClient(config.server_url);
     if (!accessClient.init()) {
         std::cerr << "Failed to initialize access client" << std::endl;
         return 1;
     }
 
+    // 2. Auto-Provisioning
+    // If we have no Door ID assigned, we ask the server "Who am I?"
+    if (config.door_id == 0) {
+        std::cout << "Door ID not configured. Requesting auto-provisioning..." << std::endl;
+        
+        while (running && config.door_id == 0) {
+            auto provisionConfig = accessClient.provision(hardwareId);
+            if (provisionConfig.success) {
+                std::cout << "Provisioning successful!" << std::endl;
+                std::cout << "Assigned Door ID: " << provisionConfig.door_id << std::endl;
+                
+                config.door_id = provisionConfig.door_id;
+                config.hikvision.host = provisionConfig.hik_host;
+                config.hikvision.port = provisionConfig.hik_port;
+                config.hikvision.username = provisionConfig.hik_user;
+                config.hikvision.password = provisionConfig.hik_password;
+                
+                // Save updated config
+                saveConfigToFile(configPath, config);
+                std::cout << "Configuration saved to " << configPath << std::endl;
+            } else {
+                std::cerr << "Provisioning failed. Retrying in 5s..." << std::endl;
+                std::this_thread::sleep_for(std::chrono::seconds(5));
+            }
+        }
+    }
+
+    printBanner(config);
+
     // Test connection to central server
     if (!accessClient.testConnection()) {
-        std::cerr << "Error: Cannot connect to central server. Please check the server URL and make sure the server is running." << std::endl;
+        std::cerr << "Error: Cannot connect to central server." << std::endl;
         return 1;
     }
 
@@ -171,39 +263,27 @@ int main(int argc, char* argv[]) {
     client::BarcodeReader reader(config.input_device);
     if (!reader.start(onBarcodeScanned)) {
         std::cerr << "Failed to start barcode reader: " << reader.getLastError() << std::endl;
-        std::cerr << "Make sure the input device exists and you have permission to read it." << std::endl;
-        std::cerr << "Try running with sudo or add your user to the 'input' group." << std::endl;
-
-#include <poll.h>
-
-// ... inside main, in the fallback block
-
-        std::cout << "\nFalling back to keyboard input for testing." << std::endl;
-        std::cout << "Type UUID and press Enter to simulate scan:" << std::endl;
-
+        std::cout << "Falling back to keyboard input for testing." << std::endl;
+        
+        // Polling loop for keyboard input
         struct pollfd fds;
         fds.fd = STDIN_FILENO;
         fds.events = POLLIN;
 
         std::string input;
         while (running) {
-            int ret = poll(&fds, 1, 100); // 100ms timeout
+            int ret = poll(&fds, 1, 100); 
             if (ret > 0) {
                 if (std::getline(std::cin, input) && !input.empty()) {
                     onBarcodeScanned(input);
                 }
-            } else if (ret < 0) {
-                // Error
-                break;
             }
-            // if ret == 0, it's a timeout, loop continues and checks 'running'
         }
     } else {
         // Main loop - wait for signal
         while (running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
-
         reader.stop();
     }
 

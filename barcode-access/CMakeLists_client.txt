@@ -18,6 +18,7 @@ set(CLIENT_SOURCES
     client/src/barcode_reader.cpp
     client/src/hikvision_isapi.cpp
     client/src/db_client.cpp
+    client/src/discovery_client.cpp
 )
 
 add_executable(access-client ${CLIENT_SOURCES})

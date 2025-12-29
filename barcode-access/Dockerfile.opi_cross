@@ -1,0 +1,70 @@
+# Usamos Debian Bookworm (arm64/amd64) para cross-compilar
+FROM debian:bookworm
+
+# Evitar preguntas interactivas durante la instalación
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1. Instalar dependencias de construcción y cross-compiler para armhf (Orange Pi Zero / ARMv7)
+RUN dpkg --add-architecture armhf && apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    gcc-arm-linux-gnueabihf \
+    g++-arm-linux-gnueabihf \
+    libpq-dev:armhf \
+    libcurl4-openssl-dev:armhf \
+    libevdev-dev:armhf \
+    libatomic1:armhf \
+    && rm -rf /var/lib/apt/lists/*
+
+# Configuración de CMake para cross-compilation
+ENV CMAKE_C_COMPILER=arm-linux-gnueabihf-gcc
+ENV CMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++
+ENV PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig
+ENV PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig
+ENV PKG_CONFIG_SYSROOT_DIR=/
+
+# 2. Instalar Oat++ (v1.3.0) - Cross-compiling
+WORKDIR /tmp
+RUN git clone --depth 1 --branch 1.3.0 https://github.com/oatpp/oatpp.git \
+    && cd oatpp \
+    && mkdir build && cd build \
+    && cmake \
+        -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+        -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ \
+        -DCMAKE_SYSTEM_NAME=Linux \
+        -DCMAKE_SYSTEM_PROCESSOR=arm \
+        -DOATPP_DISABLE_ENV_OBJECT_COUNTERS=ON \
+        -DCMAKE_BUILD_TYPE=Release .. \
+    && make -j$(nproc) install \
+    && cd ../.. && rm -rf oatpp
+
+# 3. Instalar Oatpp-PostgreSQL (v1.3.0) - Cross-compiling
+RUN git clone --depth 1 --branch 1.3.0 https://github.com/oatpp/oatpp-postgresql.git \
+    && cd oatpp-postgresql \
+    && mkdir build && cd build \
+    && cmake \
+        -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+        -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ \
+        -DCMAKE_SYSTEM_NAME=Linux \
+        -DCMAKE_SYSTEM_PROCESSOR=arm \
+        -DOATPP_DISABLE_ENV_OBJECT_COUNTERS=ON \
+        -DCMAKE_BUILD_TYPE=Release .. \
+    && make -j$(nproc) install \
+    && cd ../.. && rm -rf oatpp-postgresql
+
+# 4. Copiar el código fuente del proyecto
+WORKDIR /app
+COPY . .
+
+# 5. Compilar el proyecto
+RUN rm -rf build && mkdir build && cd build \
+    && cmake \
+        -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
+        -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ \
+        -DCMAKE_SYSTEM_NAME=Linux \
+        -DCMAKE_SYSTEM_PROCESSOR=arm \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_TESTING=OFF .. \
+    && make -j$(nproc)

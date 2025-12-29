@@ -1,18 +1,21 @@
-# Barcode Access Control - Door Client Configuration
-# Copy this file to client.ini and adjust values
+# Configuración del Cliente
+# -------------------------------------------------------------------
 
-# Door identification (1-4 for DS-K2604T)
-door.id = 1
+# ID de la Puerta (1-4)
+# Poner 0 para auto-configuración (requiere servidor v2)
+door.id=0
 
-# Barcode reader input device
-# Use 'ls /dev/input/by-id/' to find your device
-input.device = /dev/input/event0
+# Dispositivo de entrada (Lector de código de barras)
+# Usar 'ls -la /dev/input/by-id/' para encontrar el ID correcto
+input.device=/dev/input/by-id/usb-BarCode_Scanner_v1.0.0-event-kbd
 
-# Central server URL
-server.url = http://192.168.1.100:8080
+# URL del Servidor Central
+# Usar "auto" para buscar el servidor automáticamente en la red local
+server.url=auto
 
-# Hikvision controller settings
-hikvision.host = 192.168.1.200
-hikvision.port = 80
-hikvision.username = admin
-hikvision.password = your_controller_password
+# Configuración de Controladora Hikvision DS-K2604T
+# Estas credenciales se sobreescribirán si se usa auto-provisioning
+hikvision.host=192.168.1.100
+hikvision.port=80
+hikvision.username=admin
+hikvision.password=admin12345

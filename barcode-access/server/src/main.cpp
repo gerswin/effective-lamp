@@ -7,6 +7,8 @@
 #include "controller/ticket_controller.hpp"
 #include "controller/access_controller.hpp"
 #include "controller/static_controller.hpp"
+#include "controller/provision_controller.hpp"
+#include "service/discovery_service.hpp"
 #include "db/database.hpp"
 #include "common.hpp"
 
@@ -102,6 +104,12 @@ barcode_access::ServerConfig loadConfig(const std::string& configPath) {
 
 void run(const barcode_access::ServerConfig& config) {
     std::cout << "DEBUG: Entering run function" << std::endl;
+    
+    // Start Discovery Service (UDP Broadcast)
+    // Listens on 8888, announces server port (config.port)
+    service::DiscoveryService discoveryService(8888, config.port);
+    discoveryService.start();
+    
     // Initialize Oat++ Environment
     oatpp::base::Environment::init();
 
@@ -115,6 +123,7 @@ void run(const barcode_access::ServerConfig& config) {
     router->addController(controller::TicketController::createShared());
     router->addController(controller::AccessController::createShared());
     router->addController(controller::StaticController::createShared("web"));
+    router->addController(controller::ProvisionController::createShared());
 
     // Get connection handler and provider
     OATPP_COMPONENT(std::shared_ptr<oatpp::network::ConnectionHandler>, connectionHandler);
@@ -127,6 +136,7 @@ void run(const barcode_access::ServerConfig& config) {
     std::cout << "  Barcode Access Control Server" << std::endl;
     std::cout << "========================================" << std::endl;
     std::cout << "Server running on http://" << config.bind_address << ":" << config.port << std::endl;
+    std::cout << "Discovery Service running on UDP port 8888" << std::endl;
     std::cout << "API endpoints:" << std::endl;
     std::cout << "  POST /api/tickets          - Create ticket" << std::endl;
     std::cout << "  GET  /api/tickets          - List tickets" << std::endl;
@@ -135,6 +145,7 @@ void run(const barcode_access::ServerConfig& config) {
     std::cout << "  POST /api/access/validate  - Validate & use ticket" << std::endl;
     std::cout << "  GET  /api/access/logs      - Get access logs" << std::endl;
     std::cout << "  GET  /api/stats            - Get statistics" << std::endl;
+    std::cout << "  POST /api/provision        - Auto-provision client" << std::endl;
     std::cout << "========================================" << std::endl;
     std::cout << "Press Ctrl+C to stop" << std::endl;
 
@@ -151,6 +162,7 @@ void run(const barcode_access::ServerConfig& config) {
     // Stop server
     server.stop();
     connectionProvider->stop();
+    discoveryService.stop();
     serverThread.join();
 
     // Destroy Oat++ Environment
