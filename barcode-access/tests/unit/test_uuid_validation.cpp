@@ -105,7 +105,7 @@ TEST_F(UUIDValidationTest, AccessResultToString_DeniedAlreadyUsed) {
 }
 
 TEST_F(UUIDValidationTest, AccessResultToString_DeniedInvalidUUID) {
-    EXPECT_EQ(access_result_to_string(AccessResult::DENIED_INVALID_UUID), "DENIED_INVALID_UUID");
+    EXPECT_EQ(access_result_to_string(AccessResult::DENIED_INVALID_FORMAT), "DENIED_INVALID_FORMAT");
 }
 
 TEST_F(UUIDValidationTest, AccessResultToString_ErrorDB) {

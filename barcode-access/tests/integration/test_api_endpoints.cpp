@@ -115,7 +115,7 @@ protected:
         // Check UUID format
         if (!barcode_access::is_valid_uuid(uuid)) {
             result.granted = false;
-            result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_INVALID_UUID);
+            result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_INVALID_FORMAT);
             db->logAccess(uuid, door_id, false, result.reason);
             return result;
         }
@@ -268,7 +268,7 @@ TEST_F(APIEndpointTest, ValidateAccess_DeniedInvalidUUID) {
     auto result = validateAccessEndpoint("invalid-uuid", 1);
 
     EXPECT_FALSE(result.granted);
-    EXPECT_EQ(result.reason, barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_INVALID_UUID));
+    EXPECT_EQ(result.reason, barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_INVALID_FORMAT));
 }
 
 // Test access logging

@@ -25,7 +25,7 @@ public:
         return std::make_shared<ProvisionController>(objectMapper);
     }
 
-    ENDPOINT("POST", "/api/provision", provision, BODY_DTO(ProvisionRequestDto, requestDto)) {
+    ENDPOINT("POST", "/api/provision", provision, BODY_DTO(Object<ProvisionRequestDto>, requestDto)) {
         if (!requestDto->hardware_id) {
             return createResponse(Status::CODE_400, "Missing hardware_id");
         }

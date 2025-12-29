@@ -39,7 +39,7 @@ public:
             response->granted = false;
             response->reason = "UUID is required";
             logService.logAccess("", validateDto->door_id, false,
-                                barcode_access::AccessResult::DENIED_INVALID_UUID);
+                                barcode_access::AccessResult::DENIED_INVALID_FORMAT);
             return createDtoResponse(Status::CODE_400, response);
         }
 

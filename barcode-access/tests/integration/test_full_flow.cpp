@@ -60,7 +60,7 @@ protected:
         // Validate UUID format
         if (!barcode_access::is_valid_uuid(uuid)) {
             attempt.granted = false;
-            attempt.reason = "DENIED_INVALID_UUID";
+            attempt.reason = "DENIED_INVALID_FORMAT";
             db->logAccess(uuid, door_id, false, attempt.reason);
             return attempt;
         }
@@ -163,12 +163,12 @@ TEST_F(FullFlowTest, InvalidTicketAttempts) {
     // Try invalid format
     auto attempt2 = attemptAccess("invalid-format", 2);
     EXPECT_FALSE(attempt2.granted);
-    EXPECT_EQ(attempt2.reason, "DENIED_INVALID_UUID");
+    EXPECT_EQ(attempt2.reason, "DENIED_INVALID_FORMAT");
 
     // Try empty UUID
     auto attempt3 = attemptAccess("", 3);
     EXPECT_FALSE(attempt3.granted);
-    EXPECT_EQ(attempt3.reason, "DENIED_INVALID_UUID");
+    EXPECT_EQ(attempt3.reason, "DENIED_INVALID_FORMAT");
 
     EXPECT_EQ(db->getDeniedCount(), 3);
 }
