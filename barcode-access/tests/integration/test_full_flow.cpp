@@ -58,7 +58,7 @@ protected:
         attempt.door_id = door_id;
 
         // Validate UUID format
-        if (!barcode_access::is_valid_uuid(uuid)) {
+        if (!barcode_access::is_valid_ticket_code(uuid)) {
             attempt.granted = false;
             attempt.reason = "DENIED_INVALID_FORMAT";
             db->logAccess(uuid, door_id, false, attempt.reason);

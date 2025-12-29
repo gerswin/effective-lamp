@@ -39,7 +39,7 @@ protected:
             return response;
         }
 
-        if (!barcode_access::is_valid_uuid(uuid)) {
+        if (!barcode_access::is_valid_ticket_code(uuid)) {
             response.status_code = 400;
             response.success = false;
             response.message = "Invalid UUID format";
@@ -113,7 +113,7 @@ protected:
         result.current_uses = 0; // Default
 
         // Check UUID format
-        if (!barcode_access::is_valid_uuid(uuid)) {
+        if (!barcode_access::is_valid_ticket_code(uuid)) {
             result.granted = false;
             result.reason = barcode_access::access_result_to_string(barcode_access::AccessResult::DENIED_INVALID_FORMAT);
             db->logAccess(uuid, door_id, false, result.reason);
