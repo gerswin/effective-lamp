@@ -116,12 +116,9 @@ bool Database::rollbackTransaction() {
 bool Database::initializeSchema() {
     std::lock_guard<std::recursive_mutex> lock(m_mutex);
     const char* schema = R"(
-        -- Create extension for UUID if not exists
-        CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
         -- Tickets table
         CREATE TABLE IF NOT EXISTS tickets (
-            uuid UUID PRIMARY KEY,
+            uuid VARCHAR(20) PRIMARY KEY,
             used BOOLEAN DEFAULT FALSE,
             max_uses INTEGER DEFAULT -1,
             current_uses INTEGER DEFAULT 0,
@@ -140,12 +137,24 @@ bool Database::initializeSchema() {
         -- Access logs table
         CREATE TABLE IF NOT EXISTS access_logs (
             id SERIAL PRIMARY KEY,
-            ticket_uuid UUID,
+            ticket_uuid VARCHAR(20),
             door_id INTEGER NOT NULL,
             granted BOOLEAN NOT NULL,
             attempts INTEGER DEFAULT 1,
             reason VARCHAR(100),
             scanned_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+        );
+
+        -- Client Configs table (for auto-provisioning)
+        CREATE TABLE IF NOT EXISTS client_configs (
+            hardware_id VARCHAR(100) PRIMARY KEY,
+            door_id INTEGER NOT NULL,
+            description VARCHAR(255),
+            hik_host VARCHAR(100),
+            hik_port INTEGER DEFAULT 80,
+            hik_user VARCHAR(100),
+            hik_password VARCHAR(100),
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
         );
 
         -- Create indexes for access logs
