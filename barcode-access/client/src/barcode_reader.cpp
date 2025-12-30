@@ -5,6 +5,7 @@
 #include <linux/input.h>
 #include <cstring>
 #include <map>
+#include <sys/ioctl.h>
 
 namespace client {
 
@@ -44,9 +45,13 @@ bool BarcodeReader::start(BarcodeCallback callback) {
         return false;
     }
 
-    // Grab the device exclusively (optional, prevents other apps from seeing input)
-    // Uncomment if you want exclusive access:
-    // ioctl(fd_, EVIOCGRAB, 1);
+    // Grab the device exclusively (prevents other apps from seeing input)
+    if (ioctl(fd_, EVIOCGRAB, 1) < 0) {
+         std::cerr << "Warning: Failed to grab device exclusively: " << strerror(errno) << std::endl;
+         // Proceed anyway, but warn
+    } else {
+         std::cout << "Device grabbed exclusively." << std::endl;
+    }
 
     running_ = true;
     read_thread_ = std::thread(&BarcodeReader::readLoop, this);
@@ -63,6 +68,8 @@ void BarcodeReader::stop() {
     running_ = false;
 
     if (fd_ >= 0) {
+        // Release grab
+        ioctl(fd_, EVIOCGRAB, 0);
         close(fd_);
         fd_ = -1;
     }
@@ -76,8 +83,6 @@ void BarcodeReader::stop() {
 
 #include <poll.h>
 
-// ... inside readLoop method
-
 void BarcodeReader::readLoop() {
     struct input_event ev;
     current_barcode_.clear();
@@ -86,18 +91,16 @@ void BarcodeReader::readLoop() {
     fds.fd = fd_;
     fds.events = POLLIN;
 
+    bool shift_pressed = false;
+
     while (running_) {
         int ret = poll(&fds, 1, 100); // 100ms timeout
         if (ret < 0) {
-            // Error
             last_error_ = "Poll error: " + std::string(strerror(errno));
             std::cerr << last_error_ << std::endl;
             break;
         }
-        if (ret == 0) {
-            // Timeout, loop and check running_ flag
-            continue;
-        }
+        if (ret == 0) continue;
 
         if (fds.revents & POLLIN) {
             ssize_t n = read(fd_, &ev, sizeof(ev));
@@ -109,23 +112,40 @@ void BarcodeReader::readLoop() {
                 break;
             }
 
-            if (n != sizeof(ev)) {
+            if (n != sizeof(ev)) continue;
+
+            if (ev.type != EV_KEY) continue;
+
+            // Handle Shift keys (Pressed=1, Held=2, Released=0)
+            if (ev.code == KEY_LEFTSHIFT || ev.code == KEY_RIGHTSHIFT) {
+                if (ev.value == 1) shift_pressed = true;
+                else if (ev.value == 0) shift_pressed = false;
                 continue;
             }
 
-            if (ev.type != EV_KEY || ev.value != 1) {
-                continue;
-            }
-
-            if (ev.code == KEY_ENTER || ev.code == KEY_KPENTER) {
-                if (!current_barcode_.empty() && callback_) {
-                    callback_(current_barcode_);
-                    current_barcode_.clear();
-                }
-            } else {
-                auto it = KEY_MAP.find(ev.code);
-                if (it != KEY_MAP.end()) {
-                    current_barcode_ += it->second;
+            // Only process key presses (value 1)
+            if (ev.value == 1) {
+                if (ev.code == KEY_ENTER || ev.code == KEY_KPENTER) {
+                    if (!current_barcode_.empty() && callback_) {
+                        callback_(current_barcode_);
+                        current_barcode_.clear();
+                    }
+                } else {
+                    auto it = KEY_MAP.find(ev.code);
+                    if (it != KEY_MAP.end()) {
+                        char c = it->second;
+                        // Handle Shift mappings
+                        if (shift_pressed) {
+                            if (c >= 'a' && c <= 'z') {
+                                c = toupper(c);
+                            } else if (c == '-') {
+                                c = '_';
+                            }
+                            // Add other shift mappings if needed (e.g., numbers to symbols), 
+                            // but NanoID only needs alphanumeric + _ and -
+                        }
+                        current_barcode_ += c;
+                    }
                 }
             }
         }
